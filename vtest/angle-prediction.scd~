@@ -1,0 +1,40 @@
+Proto({
+	~num = 5;
+	~prep = {
+		~x = 0 ! ~num;
+		~y = 0 ! ~num;
+		~mag = 0 ! ~num;
+		// these are fixed values used for the regression
+		// calculate once, instead of every time
+		~indices = (0 .. ~num-1);
+		~i_avg = ~indices.mean;
+		~i_minus = ~indices - ~i_avg;
+	};
+	~addPoint = { |x, y, mag|
+		~x = ~x.rotate(-1).put(~num-1, x);
+		~y = ~y.rotate(-1).put(~num-1, y);
+		~mag = ~mag.rotate(-1).put(~num-1, mag);
+	};
+	~predict = {
+		var y_avg = ~y.mean,
+			x_avg = ~x.mean,
+			x_minus = ~x - x_avg,
+			slope = (x_minus * (y - y_avg)).sum / (x_minus.squared).sum,
+			intercept = y_avg - (slope * x_avg),
+			// really I just need to know if this is negative or positive
+			new_x_slope = (~i_minus * x_minus).sum / (~i_minus.squared).sum,
+			new_x_intercept = x_avg - (new_x_slope * ~i_avg);
+		~new_x = new_x_intercept + (new_x_slope * ~num),  // ~num = high 'i' + 1
+		~new_y = intercept + (slope * ~new_x);
+		~angle = atan(slope) + (pi * binaryValue(new_x_slope < 0));
+		~radius = sqrt((~x.last - ~new_x).squared + (~y.last - ~new_y).squared);
+	};
+	~plot = {
+	};
+}, parentKeys: #[num]) => PR(\regressionUnit);
+
+[1, 2, 3].rotate(-1)
+
+Pseries.fromEndpoints(0, 2pi, 200).tan.asStream.all.plot2
+
+[1e6, -1e6].atan / pi
