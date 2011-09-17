@@ -5,8 +5,10 @@
 Proto({
 	~num = 5;
 	~color = Color.red;
+	~predict_color = Color.blue;
 	~magspec = #[0, 20, -6].asSpec;
 	~maxmag = 783360;
+	~magThresh = 7000;  // below this, ignore the new point
 	~predicted = false;
 	~prep = { |x_origin = 0, y_origin = 0|
 		~x = 0 ! ~num;
@@ -21,9 +23,17 @@ Proto({
 		~y_origin = y_origin;
 		currentEnvironment
 	};
-	~addPoint = { |x, y, mag|
-		~x = ~x.rotate(-1).put(~num-1, x);
-		~y = ~y.rotate(-1).put(~num-1, y);
+	~addPoint = { |y, x, mag|
+		var	x1, y1;
+		if(mag < ~magThresh) {
+			x1 = ~x.last;
+			y1 = ~y.last;
+		} {
+			x1 = x;
+			y1 = y;
+		};
+		~x = ~x.rotate(-1).put(~num-1, x1);
+		~y = ~y.rotate(-1).put(~num-1, y1);
 		~mag = ~mag.rotate(-1).put(~num-1, mag);
 		~predicted = false;
 		currentEnvironment
@@ -56,7 +66,7 @@ Proto({
 	};
 	// must call this only from a drawing function
 	~plot = {
-		var	mag = ~magspec.map(~mag.last / ~maxmag),
+		var	mag = ~magspec.map(~mag.last / ~maxmag) * 0.5,
 			pt1 = Point(~x.last + ~x_origin, ~y.last + ~y_origin),
 			pt2;
 		Pen.color_(~color)
@@ -64,7 +74,8 @@ Proto({
 		if(~predicted) {
 			mag = mag * 0.5;
 			pt2 = Point(~new_x + ~x_origin, ~new_y + ~y_origin);
-			Pen.fillOval(Rect.aboutPoint(pt2, mag, mag))
+			Pen.color_(~predict_color)
+			.fillOval(Rect.aboutPoint(pt2, mag, mag))
 			.moveTo(pt2).lineTo(pt1).stroke;
 		};
 	};
@@ -74,8 +85,8 @@ Proto({
 	~dim = 5;
 	~prep = {
 		~points = Array(~dim.squared);
-		~dim.do { |yi|
-			~dim.do { |xi|
+		~dim.do { |xi|
+			~dim.do { |yi|
 				~points.add(PR(\regressionUnit).copy.prep(xi * 64, yi * 48));
 			};
 		};
@@ -158,3 +169,13 @@ OSCFunc.allFuncProxies
 
 x = BP(\ml).points.detect { |pt| pt.new_y == inf };
 x.listVars
+
+
+// points return to center when no activity
+// try to find a threshold?
+
+u.remove;
+u = SimpleController(BP(\ml)).put(\allPtsReceived, {
+	var	pt = BP(\ml).points[0];
+	pt.mag.last.postln;
+});
