@@ -1,6 +1,3 @@
-// size is wrong
-// frames are mapped wrong
-
 (
 Proto({
 	~num = 5;
@@ -81,6 +78,48 @@ Proto({
 	};
 }, parentKeys: #[num, color, magspec, maxmag]) => PR(\regressionUnit);
 
+PR(\regressionUnit).v.clone({
+	~proxthresh = 10;
+
+	~prep = { |x_origin = 0, y_origin = 0, proximatePoints|
+		~x = 0 ! ~num;
+		~y = 0 ! ~num;
+		~mag = 0 ! ~num;
+		~x_origin = x_origin;
+		~y_origin = y_origin;
+		~proxPts = proximatePoints;
+		currentEnvironment
+	};
+
+	~predict = {
+		var	distances = ~proxPts.collect { |pt, i|
+			hypot(~x.last + ~x_origin - (pt.x.last + pt.x_origin),
+				~y.last + ~y_origin - (pt.y.last + pt.y_origin))
+		},
+		i = distances.minIndex,
+		pt;
+		~proxHit = if(distances[i] <= ~proxthresh) {
+			pt = ~proxPts[i];
+			Point(pt.x.last + pt.x_origin, pt.y.last + pt.y_origin)
+		} { nil };
+	};
+
+	~plot = {
+		var	mag = ~magspec.map(~mag.last / ~maxmag) * 0.5,
+			pt1 = Point(~x.last + ~x_origin, ~y.last + ~y_origin),
+			proxpt,
+		pt2;
+		Pen.color_(~color).width_(1)
+		.fillOval(Rect.aboutPoint(pt1, mag, mag));
+		// draw line for proximity?
+		if(~proxHit.notNil) {
+			Pen.width_(3)
+			.line(pt1, ~proxHit)
+			.stroke;
+		};
+	};
+}/*, parentKeys*/) => PR(\proximityUnit);
+
 Proto({
 	~dim = 5;
 	~prep = {
@@ -111,6 +150,33 @@ Proto({
 		~points.do { |pt| pt.plot };
 	};
 }) => PR(\motionListener);
+
+PR(\motionListener).clone({
+	~prep = {
+		var	i = 0, proxpts;
+		~points = Array(~dim.squared);
+		~dim.do { |xi|
+			~dim.do { |yi|
+				~points.add(PR(\proximityUnit).copy.prep(xi * 64, yi * 48));
+			};
+		};
+		~dim.do { |xi|
+			~dim.do { |yi|
+				proxpts = Array.new;
+				#[-1, 0, 0, -1, 1, 0, 0, 1].pairsDo { |xinc, yinc|
+					if(inclusivelyBetween(xi + xinc, 0, ~dim-1)
+						and: { inclusivelyBetween(yi + yinc, 0, ~dim-1) }) {
+							proxpts = proxpts.add(~points[(xi + xinc) * ~dim + (yi + yinc)]);
+						};
+				};
+				~points[i].proxPts = proxpts;
+				i = i + 1;
+			};
+		};		
+		~makeResponder.();
+		currentEnvironment
+	};
+}) => PR(\proxListener);
 
 // let's do this right... don't fold gui into data-handling class
 Proto({
@@ -157,13 +223,72 @@ BP(#[mg, ml]).free;
 PR(\motionListener) => BP(\ml);
 PR(\motionGui).chuck(BP(\mg), nil, (model: BP(\ml)));
 
+BP(#[mg, ml]).free;
+PR(\proxListener) => BP(\ml);
+PR(\motionGui).chuck(BP(\mg), nil, (model: BP(\ml)));
+
+BP(\ml).points.do { |pt| pt.proxthresh = 24 };
+BP(\ml).points.do { |pt| pt.magThresh = 0 };
+
+BP.exists(\mg)
 
 BP(\ml).listVars
 BP.keys
 
+BP(\ml).points.do { |pt, index|
+	pt.plot = {
+		var	mag = ~magspec.map(~mag.last / ~maxmag) * 0.5,
+			pt1 = Point(~x.last + ~x_origin, ~y.last + ~y_origin),
+			proxpt,
+		pt2;
+		Pen.color_(~color).width_(1)
+		.fillOval(Rect.aboutPoint(pt1, mag, mag));
+		// draw line for proximity?
+		if(~proxHit.notNil) {
+			// proxpt = ~proxPts[~proxIndex];
+			// pt2 = Point(proxpt.x.last + proxpt.x_origin, proxpt.y.last + proxpt.y_origin);
+[index, ~proxIndex, pt1, ~proxHit, rho(pt1 - ~proxHit)].asCompileString.debug("proximity line");
+			Pen.width_(3)
+			.line(pt1, ~proxHit)
+			.stroke;
+		};
+	};
+	pt.predict = {
+		var	distances = ~proxPts.collect { |pt, i|
+			hypot(~x.last + ~x_origin - (pt.x.last + pt.x_origin),
+				~y.last + ~y_origin - (pt.y.last + pt.y_origin))
+		},
+		i = distances.minIndex;
+		~proxHit = if(distances[i] <= ~proxthresh) {
+			pt = ~proxPts[i];
+			Point(pt.x.last + pt.x_origin, pt.y.last + pt.y_origin)
+		} { nil };
+		// if(~proxIndex.notNil) {
+		// 	~proxIndex.debug("proxIndex");
+		// 	[distances[i], ~x.last + ~x_origin, (),
+		// 		~y.last + ~y_origin, (pt.y.last + pt.y_origin)].debug("points");
+		// };
+	};
+};
+
+
+BP(\ml).points[12].predict = {
+		var	distances = ~proxPts.collect { |pt, i|
+			hypot(~x.last + ~x_origin - (pt.x.last + pt.x_origin),
+				~y.last + ~y_origin - (pt.y.last + pt.y_origin))
+		},
+		i = distances.debug("distances").minIndex;
+		~proxIndex = if(distances[i] <= ~proxthresh) { i } { nil };
+	~proxIndex.debug("proxIndex");
+	};
+
+
 
 BP(\ml).resp.func.inspect
-BP(\ml).points[0].listVars
+BP(\ml).points[1].listVars
+
+BP(\ml).points.select { |pt| pt.proxPts.size == 0 }.size
+
 
 OSCFunc.allFuncProxies
 
