@@ -18,6 +18,7 @@ Proto({
 		~i_minus = ~indices - ~i_avg;
 		~x_origin = x_origin;
 		~y_origin = y_origin;
+		~color_.(~color);
 		currentEnvironment
 	};
 	~addPoint = { |y, x, mag|
@@ -63,11 +64,14 @@ Proto({
 	};
 	// must call this only from a drawing function
 	~plot = {
-		var	mag = ~magspec.map(~mag.last / ~maxmag) * 0.5,
+		var	mag = ~magspec.map(~mag.last / ~maxmag) * 0.5, mg,
 			pt1 = Point(~x.last + ~x_origin, ~y.last + ~y_origin),
 			pt2;
-		Pen.color_(~color)
-		.fillOval(Rect.aboutPoint(pt1, mag, mag));
+		~x.do { |x, i|
+			mg = mag * i / ~num;
+			Pen.color_(~colors[i])
+			.fillOval(Rect.aboutPoint(Point(x + ~x_origin, ~y[i] + ~y_origin), mg, mg));
+		};
 		if(~predicted) {
 			mag = mag * 0.5;
 			pt2 = Point(~new_x + ~x_origin, ~new_y + ~y_origin);
@@ -75,6 +79,13 @@ Proto({
 			.fillOval(Rect.aboutPoint(pt2, mag, mag))
 			.moveTo(pt2).lineTo(pt1).stroke;
 		};
+	};
+	~color_ = { |color|
+		var	white = Color.white;
+		~color = color;
+		~colors = Array.fill(~num, { |i|
+			color.blend(white, i / ~num);
+		}).reverse;
 	};
 }, parentKeys: #[num, color, magspec, maxmag]) => PR(\regressionUnit);
 
@@ -122,11 +133,12 @@ PR(\regressionUnit).v.clone({
 
 Proto({
 	~dim = 5;
+	~ptNum = 5;
 	~prep = {
 		~points = Array(~dim.squared);
 		~dim.do { |xi|
 			~dim.do { |yi|
-				~points.add(PR(\regressionUnit).copy.prep(xi * 64, yi * 48));
+				~points.add(PR(\regressionUnit).copy.put(\num, ~ptNum).prep(xi * 64, yi * 48));
 			};
 		};
 		~makeResponder.();
@@ -211,17 +223,46 @@ Proto({
 		};
 		~uview = UserView(~win, ~win.view.bounds);
 		~uview.drawFunc_(e {
-			~model.updatePoints;
+			~updateView.();
 		});
 		~win.front.refresh;
 		~win.onClose = e { BP(~collIndex).free };
 	};
+	~updateView = {
+		~model.updatePoints;
+	};
 }) => PR(\motionGui);
+
+PR(\motionGui).clone({
+	~angleColor = Color.gray;
+	~superPrep = ~prep;
+	~prep = {
+		~anglebuf = Array.fill(3, { 0@0 });
+		~anglebufIndex = 0;
+		~superPrep.();
+	};
+	~updateView = {
+		var sum = Point(0, 0), bounds = ~uview.bounds, ctr = bounds.center;
+		~model.points.do { |p|
+			if(p.predicted) {
+				sum = sum + (Point(p.new_x - p.x.last, p.new_y - p.y.last) * p.mag.last);
+			};
+		};
+		~anglebuf.wrapPut(~anglebufIndex, sum);
+		~anglebufIndex = ~anglebufIndex + 1;
+		sum = Point(0, 0);
+		~anglebuf.do { |pt| sum = sum + pt };
+		Pen.color_(~angleColor).width_(5)
+		.line(ctr, ctr + Polar(bounds.height * 0.4, atan2(sum.y, sum.x)).asPoint)
+		.stroke.width_(1);
+		~model.updatePoints;
+	};
+}) => PR(\motionAngleGui);
 )
 
 BP(#[mg, ml]).free;
-PR(\motionListener) => BP(\ml);
-PR(\motionGui).chuck(BP(\mg), nil, (model: BP(\ml)));
+PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3));
+PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
 
 BP(#[mg, ml]).free;
 PR(\proxListener) => BP(\ml);
@@ -304,3 +345,73 @@ u = SimpleController(BP(\ml)).put(\allPtsReceived, {
 	var	pt = BP(\ml).points[0];
 	pt.mag.last.postln;
 });
+
+
+// averaging angles -- but I want a weighted average, so *not* unit vectors
+p = BP(\ml).points[12];
+p.listVars
+
+p.angle / 2pi * 360
+
+u = atan2(p.y.last - p.new_y, p.new_x - p.x.last);
+u / 2pi * 360
+
+p.x ++ p.new_x
+p.y ++ p.new_y
+
+z = ((p.x - p.x.mean) * (p.y - p.y.mean)).sum.neg / (p.x - p.x.mean).squared.sum;
+t = atan(z);
+
+// vector (non-unit) average
+z = Point(0, 0);
+BP(\ml).points.do { |p|
+	// note, inverting 'y' because gui y coordinates increase going down
+	z = z + (Point(p.new_x - p.x.last, p.y.last - p.new_y) * p.mag.last);
+};
+z
+
+z.theta / 2pi * 360
+
+
+		var y_avg = ~y.mean,
+			x_avg = ~x.mean,
+			x_minus = ~x - x_avg,
+			slope = (x_minus * (~y - y_avg)).sum / max((x_minus.squared).sum, 0.0001),
+			intercept = y_avg - (slope * x_avg),
+			// really I just need to know if this is negative or positive
+			new_x_slope = (~i_minus * x_minus).sum / (~i_minus.squared).sum,
+			new_x_intercept = x_avg - (new_x_slope * ~i_avg);
+		~new_x = new_x_intercept + (new_x_slope * ~num);  // ~num = high 'i' + 1
+		~new_y = intercept + (slope * ~new_x);
+		~angle = atan(slope) + (pi * binaryValue(new_x_slope < 0));
+		~radius = sqrt((~x.last - ~new_x).squared + (~y.last - ~new_y).squared);
+
+
+BP(\mg).anglebuf = Array.fill(3, { 0@0 });
+BP(\mg).anglebufIndex = 0;
+BP(\mg).anglebufSum = 0@0;
+
+BP(\mg).updateView = {
+	var sum = Point(0, 0), bounds = ~uview.bounds, ctr = bounds.center;
+	~model.points.do { |p|
+		if(p.predicted) {
+			sum = sum + (Point(p.new_x - p.x.last, p.new_y - p.y.last) * p.mag.last);
+		};
+	};
+//	~anglebufSum = ~anglebufSum.debug("sum before") - ~anglebuf.wrapAt(~anglebufIndex).debug("removing old") + sum.debug("adding new");
+	~anglebuf.wrapPut(~anglebufIndex, sum);
+	~anglebufIndex = ~anglebufIndex + 1;
+	sum = Point(0, 0);
+	~anglebuf.do { |pt| sum = sum + pt };
+	// sum = ~anglebuf.sum;
+// [sum, atan2(sum.y.neg, sum.x)].debug("sum, angle");
+	Pen.color_(~angleColor).width_(5)
+	.line(ctr, ctr + Polar(bounds.height * 0.4, atan2(sum.y, sum.x)).asPoint)
+	.stroke.width_(1);
+	~model.updatePoints;
+};
+
+
+[Point(1, 1), Point(2, 2)].sum
+
+0 + Point(1, 1)
