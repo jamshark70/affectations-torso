@@ -89,6 +89,7 @@ Proto({
 	~dim = 5;
 	~ptNum = 5;
 	~anglebufSize = 3;
+	~maxmag = 3000000;
 	~prep = {
 		~points = Array(~dim.squared);
 		~dim.do { |xi|
@@ -109,6 +110,7 @@ Proto({
 		~resp = OSCFunc(e { |msg|
 			~points[msg[4] - 1].addPoint(*msg[1..3]).predict;
 			if(msg[4] == ~dim.squared) {
+				~predict.();
 				BP(~collIndex).changed(\allPtsReceived);
 			};
 		}, '/coord');
@@ -129,10 +131,11 @@ Proto({
 			};
 		};
 		~centroid = Point(
-			(centroidx / magsum).linlin(-1, 1, 0, 319),
-			(centroidy / magsum).linlin(-1, 1, 0, 239)
+			(centroidx / max(magsum, 1)).linlin(-1, 1, 0, 319),
+			(centroidy / max(magsum, 1)).linlin(-1, 1, 0, 239)
 		);
 		~magsum = magsum;
+		~normmag = magsum / ~maxmag;
 		~anglebuf.wrapPut(~anglebufIndex, sum);
 		~anglebufIndex = ~anglebufIndex + 1;
 		sum = Point(0, 0);
@@ -148,6 +151,7 @@ Proto({
 	~pdAddr = NetAddr("127.0.0.1", 57122);
 	~prep = { |model|
 		~model ?? { ~model = model };
+		~model.predict;  // need to fill some variables in the model
 		~makeController.();
 		~makeViews.();
 		currentEnvironment
@@ -168,7 +172,7 @@ Proto({
 		// grid background, don't redraw on every userview refresh
 		~win.drawFunc = e {
 			Pen.color = ~gridColor;
-			5.do { |i|
+			(~model.dim + 1).do { |i|
 				Pen.moveTo(Point(0, i * 48)).lineTo(Point(320, i * 48))
 				.moveTo(Point(i * 64, 0)).lineTo(Point(i * 64, 240));
 			};
@@ -196,30 +200,44 @@ PR(\motionGui).clone({
 	~angleColor = Color.gray;
 	~superPrep = ~prep;
 	~prep = {
-		~anglebuf = Array.fill(3, { 0@0 });
-		~anglebufIndex = 0;
 		~superPrep.();
 	};
 	~updateView = {
 		var bounds = ~uview.bounds, ctr, pt;
-		~model.predict;
 		pt = ~model.anglePoint;
 		ctr = ~model.centroid;
 		Pen.color_(~angleColor)
-		.fillRect(Rect.aboutPoint(ctr, 4, 4))
-		.width_(5)
-		.line(ctr, ctr + Polar(20, atan2(pt.y, pt.x)).asPoint)
+		.fillRect(Rect.aboutPoint(ctr, 6, 6))
+		.width_(4)
+		.line(ctr, ctr + Polar(bounds.height * 0.4 * ~model.normmag, atan2(pt.y, pt.x)).asPoint)
 		.stroke.width_(1);
 		~model.updatePoints;
 	};
 }) => PR(\motionAngleGui);
 )
 
+// launch pd patch (too lazy to do by gui)
 "xdg-open %".format((thisProcess.nowExecutingPath.dirname +/+ "frame-diff5.pd").escapeChar($ )).unixCmd;
 
 BP(#[mg, ml]).free;
 PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3));
 PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
+
+// watch magnitudes
+// seems i can normalize to roughly 3000000
+r = Routine {
+	loop {
+		BP(\ml).magsum.postln;
+		3.do { 1.yield };
+	};
+};
+
+u.remove;
+u = Updater(BP(\ml), { |obj, what|
+	if(what == \allPtsReceived) { r.next };
+});
+
+
 
 BP(#[mg, ml]).free;
 PR(\proxListener) => BP(\ml);
