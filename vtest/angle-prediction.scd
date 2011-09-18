@@ -22,6 +22,11 @@ Proto({
 		~color_.(~color);
 		currentEnvironment
 	};
+
+	~xabs = { ~x.last + ~x_origin };
+	~yabs = { ~y.last + ~y_origin };
+	~ptabs = { Point(~xabs.(), ~yabs.()) };
+
 	~addPoint = { |y, x, mag|
 		var	x1, y1;
 		if(mag < ~magThresh) {
@@ -80,51 +85,10 @@ Proto({
 	};
 }, parentKeys: #[num, color, magspec, maxmag]) => PR(\regressionUnit);
 
-PR(\regressionUnit).v.clone({
-	~proxthresh = 10;
-
-	~prep = { |x_origin = 0, y_origin = 0, proximatePoints|
-		~x = 0 ! ~num;
-		~y = 0 ! ~num;
-		~mag = 0 ! ~num;
-		~x_origin = x_origin;
-		~y_origin = y_origin;
-		~proxPts = proximatePoints;
-		currentEnvironment
-	};
-
-	~predict = {
-		var	distances = ~proxPts.collect { |pt, i|
-			hypot(~x.last + ~x_origin - (pt.x.last + pt.x_origin),
-				~y.last + ~y_origin - (pt.y.last + pt.y_origin))
-		},
-		i = distances.minIndex,
-		pt;
-		~proxHit = if(distances[i] <= ~proxthresh) {
-			pt = ~proxPts[i];
-			Point(pt.x.last + pt.x_origin, pt.y.last + pt.y_origin)
-		} { nil };
-	};
-
-	~plot = {
-		var	mag = ~magspec.map(~mag.last / ~maxmag) * 0.5,
-			pt1 = Point(~x.last + ~x_origin, ~y.last + ~y_origin),
-			proxpt,
-		pt2;
-		Pen.color_(~color).width_(1)
-		.fillOval(Rect.aboutPoint(pt1, mag, mag));
-		// draw line for proximity?
-		if(~proxHit.notNil) {
-			Pen.width_(3)
-			.line(pt1, ~proxHit)
-			.stroke;
-		};
-	};
-}/*, parentKeys*/) => PR(\proximityUnit);
-
 Proto({
 	~dim = 5;
 	~ptNum = 5;
+	~anglebufSize = 3;
 	~prep = {
 		~points = Array(~dim.squared);
 		~dim.do { |xi|
@@ -133,6 +97,8 @@ Proto({
 			};
 		};
 		~makeResponder.();
+		~anglebuf = Array.fill(~anglebufSize, { 0@0 });
+		~anglebufIndex = 0;
 		currentEnvironment
 	};
 	~freeCleanup = {
@@ -152,34 +118,29 @@ Proto({
 	~updatePoints = {
 		~points.do { |pt| pt.plot };
 	};
-}) => PR(\motionListener);
-
-PR(\motionListener).clone({
-	~prep = {
-		var	i = 0, proxpts;
-		~points = Array(~dim.squared);
-		~dim.do { |xi|
-			~dim.do { |yi|
-				~points.add(PR(\proximityUnit).copy.prep(xi * 64, yi * 48));
+	~predict = {
+		var sum = Point(0, 0), centroidx = 0, centroidy = 0, magsum = 0;
+		~points.do { |p|
+			centroidx = centroidx + (p.xabs.linlin(0, 319, -1, 1) * p.mag.last);
+			centroidy = centroidy + (p.yabs.linlin(0, 239, -1, 1) * p.mag.last);
+			magsum = magsum + p.mag.last;
+			if(p.predicted) {
+				sum = sum + (Point(p.new_x - p.x.last, p.new_y - p.y.last) * p.mag.last);
 			};
 		};
-		~dim.do { |xi|
-			~dim.do { |yi|
-				proxpts = Array.new;
-				#[-1, 0, 0, -1, 1, 0, 0, 1].pairsDo { |xinc, yinc|
-					if(inclusivelyBetween(xi + xinc, 0, ~dim-1)
-						and: { inclusivelyBetween(yi + yinc, 0, ~dim-1) }) {
-							proxpts = proxpts.add(~points[(xi + xinc) * ~dim + (yi + yinc)]);
-						};
-				};
-				~points[i].proxPts = proxpts;
-				i = i + 1;
-			};
-		};		
-		~makeResponder.();
+		~centroid = Point(
+			(centroidx / magsum).linlin(-1, 1, 0, 319),
+			(centroidy / magsum).linlin(-1, 1, 0, 239)
+		);
+		~magsum = magsum;
+		~anglebuf.wrapPut(~anglebufIndex, sum);
+		~anglebufIndex = ~anglebufIndex + 1;
+		sum = Point(0, 0);
+		~anglebuf.do { |pt| sum = sum + pt };
+		~anglePoint = sum;
 		currentEnvironment
 	};
-}) => PR(\proxListener);
+}) => PR(\motionListener);
 
 // let's do this right... don't fold gui into data-handling class
 Proto({
@@ -240,23 +201,21 @@ PR(\motionGui).clone({
 		~superPrep.();
 	};
 	~updateView = {
-		var sum = Point(0, 0), bounds = ~uview.bounds, ctr = bounds.center;
-		~model.points.do { |p|
-			if(p.predicted) {
-				sum = sum + (Point(p.new_x - p.x.last, p.new_y - p.y.last) * p.mag.last);
-			};
-		};
-		~anglebuf.wrapPut(~anglebufIndex, sum);
-		~anglebufIndex = ~anglebufIndex + 1;
-		sum = Point(0, 0);
-		~anglebuf.do { |pt| sum = sum + pt };
-		Pen.color_(~angleColor).width_(5)
-		.line(ctr, ctr + Polar(bounds.height * 0.4, atan2(sum.y, sum.x)).asPoint)
+		var bounds = ~uview.bounds, ctr, pt;
+		~model.predict;
+		pt = ~model.anglePoint;
+		ctr = ~model.centroid;
+		Pen.color_(~angleColor)
+		.fillRect(Rect.aboutPoint(ctr, 4, 4))
+		.width_(5)
+		.line(ctr, ctr + Polar(20, atan2(pt.y, pt.x)).asPoint)
 		.stroke.width_(1);
 		~model.updatePoints;
 	};
 }) => PR(\motionAngleGui);
 )
+
+"xdg-open %".format((thisProcess.nowExecutingPath.dirname +/+ "frame-diff5.pd").escapeChar($ )).unixCmd;
 
 BP(#[mg, ml]).free;
 PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3));
