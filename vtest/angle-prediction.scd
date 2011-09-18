@@ -16,6 +16,7 @@ Proto({
 		~indices = (0 .. ~num-1);
 		~i_avg = ~indices.mean;
 		~i_minus = ~indices - ~i_avg;
+		~i_minus_sqr_sum = ~i_minus.squared.sum;
 		~x_origin = x_origin;
 		~y_origin = y_origin;
 		~color_.(~color);
@@ -36,29 +37,19 @@ Proto({
 		~predicted = false;
 		currentEnvironment
 	};
+	// two linear regressions: x vs time index, y vs time index
+	// this is much more accurate than regressing x vs time and y vs x
 	~predict = {
 		var y_avg = ~y.mean,
 			x_avg = ~x.mean,
-			x_minus = ~x - x_avg,
-			slope = (x_minus * (~y - y_avg)).sum / max((x_minus.squared).sum, 0.0001),
-			intercept = y_avg - (slope * x_avg),
-			// really I just need to know if this is negative or positive
-			new_x_slope = (~i_minus * x_minus).sum / (~i_minus.squared).sum,
-			new_x_intercept = x_avg - (new_x_slope * ~i_avg);
-		~new_x = new_x_intercept + (new_x_slope * ~num);  // ~num = high 'i' + 1
-		~new_y = intercept + (slope * ~new_x);
-		~angle = atan(slope) + (pi * binaryValue(new_x_slope < 0));
+			x_slope = (~i_minus * (~x - x_avg)).sum / ~i_minus_sqr_sum,
+			y_slope = (~i_minus * (~y - y_avg)).sum / ~i_minus_sqr_sum,
+			x_intercept = x_avg - (x_slope * ~i_avg),
+			y_intercept = y_avg - (y_slope * ~i_avg);
+		~new_x = x_intercept + (x_slope * ~num);  // ~num = high 'i' + 1
+		~new_y = y_intercept + (y_slope * ~num);
+		~angle = atan2(~y.last - ~new_y, ~x.last - ~new_x);
 		~radius = sqrt((~x.last - ~new_x).squared + (~y.last - ~new_y).squared);
-
-		// if(~x_origin + ~y_origin == 0) {
-		// 	[~y, y_avg].debug("y");
-		// 	[~x, x_avg, x_minus].debug("x");
-		// 	[slope, intercept].debug("slope, intercept");
-		// 	[new_x_slope, new_x_intercept].debug("new_x slope, intercept");
-		// 	[~new_x, ~new_y].debug("new (cartesian)");
-		// 	[~angle, ~radius].debug("new (polar)");
-		// };
-
 		~predicted = true;
 		currentEnvironment
 	};
@@ -193,6 +184,7 @@ PR(\motionListener).clone({
 // let's do this right... don't fold gui into data-handling class
 Proto({
 	~gridColor = Color.gray(0.6);
+	~pdAddr = NetAddr("127.0.0.1", 57122);
 	~prep = { |model|
 		~model ?? { ~model = model };
 		~makeController.();
@@ -211,7 +203,7 @@ Proto({
 		});
 	};
 	~makeViews = {
-		~win = Window(\test, Rect(500, 50, 320, 240));
+		~win = Window(\test, Rect(500, 50, 320, 270));
 		// grid background, don't redraw on every userview refresh
 		~win.drawFunc = e {
 			Pen.color = ~gridColor;
@@ -221,9 +213,15 @@ Proto({
 			};
 			Pen.stroke;
 		};
-		~uview = UserView(~win, ~win.view.bounds);
+		~uview = UserView(~win, Rect(0, 0, 320, 240));
 		~uview.drawFunc_(e {
 			~updateView.();
+		});
+		// 100 == (320 - 120) / 2
+		~onoff = Button(~win, Rect(100, 245, 120, 20))
+		.states_([["stopped"], ["running", Color.black, Color(0.6, 1.0, 0.6)]])
+		.action_(e { |view|
+			~pdAddr.tryPerform(\sendMsg, \onOffSwitch, view.value)
 		});
 		~win.front.refresh;
 		~win.onClose = e { BP(~collIndex).free };
@@ -415,3 +413,6 @@ BP(\mg).updateView = {
 [Point(1, 1), Point(2, 2)].sum
 
 0 + Point(1, 1)
+
+
+~pdAddr.tryPerform(\sendMsg, \onOffSwitch, 0)
