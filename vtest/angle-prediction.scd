@@ -214,6 +214,69 @@ PR(\motionGui).clone({
 		~model.updatePoints;
 	};
 }) => PR(\motionAngleGui);
+
+Proto({
+	~channels = 3;
+	~chunkFrames = 1024;
+	~model_ = { |newModel|
+		~removeResponder.();
+		~model = newModel;
+		if(~soundfile.notNil) { ~makeResponder.() };
+		currentEnvironment
+	};
+	~startLog = { |filename|
+		var dir = ~dir ?? { thisProcess.nowExecutingPath.dirname },
+			path = dir +/+ (filename ?? { "datalog%.aiff".format(Date.getDate.stamp) });
+		if(~soundfile.isNil) {
+			path = path.standardizePath;
+			~soundfile = SoundFile(path).headerFormat_("AIFF").sampleFormat_("float")
+			.numChannels_(~channels);
+			if(~soundfile.openWrite.not) {
+				~soundfile.close;
+				~soundfile = nil;
+				"couldn't open % for writing".format(path).error;
+			} {
+				~bufsize = ~channels * ~chunkFrames;
+				~dataBuf = FloatArray.new(~bufsize);
+				~makeResponder.();
+			};
+		} {
+			"Already logging.".warn;
+		};
+		currentEnvironment
+	};
+	~stopLog = {
+		if(~soundfile.notNil) {
+			~removeResponder.();
+			~soundfile.writeData(~dataBuf);
+			~soundfile.close;
+			~soundfile = nil;
+		};
+		currentEnvironment
+	};
+	~makeResponder = {
+		if(~resp.isNil) {
+			~resp = SimpleController(~model)
+			.put(\allPtsReceived, e { ~addData.(); })
+		};
+	};
+	~removeResponder = {
+		if(~resp.notNil) { ~resp.remove; ~resp = nil; };
+	};
+	~addData = {
+		~model.points.do { |pt|
+			~dataBuf.add(pt.x.last).add(pt.y.last).add(pt.mag.last);
+			if(~dataBuf.size == ~bufsize) {
+				~soundfile.writeData(~dataBuf);
+				~dataBuf = FloatArray.new(~bufsize);
+			};
+		};
+	};
+	~freeCleanup = {
+		~stopLog.();
+		~removeResponder.();
+	};
+}) => PR(\soundFileLogger);
 )
 
 // launch pd patch (too lazy to do by gui)
@@ -222,6 +285,17 @@ PR(\motionGui).clone({
 BP(#[mg, ml]).free;
 PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3));
 PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
+
+BP(\log).free;
+PR(\soundFileLogger).chuck(BP(\log), nil, (model: BP(\ml)));
+
+BP(\log).startLog;
+BP(\log).stopLog;
+
+BP(\log).listVars;
+
+BP(\ml).dependants
+
 
 // watch magnitudes
 // seems i can normalize to roughly 3000000
