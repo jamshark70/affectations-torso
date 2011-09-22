@@ -277,6 +277,70 @@ Proto({
 		~removeResponder.();
 	};
 }) => PR(\soundFileLogger);
+
+Proto({
+	~dir = thisProcess.nowExecutingPath.dirname;
+	~file = "datalog110921_185859.aiff";
+	~channels = 3;
+	~frameRate = 50;
+	~loop = 0;
+	~alwaysReset = true;
+	~prep = { |model|
+		~buf = Buffer.readAndQuery(s, (~dir +/+ ~file).standardizePath);
+		if(model.notNil) { ~model = model };
+		~makeSynthDef.();
+		~makeResponder.();
+		currentEnvironment
+	};
+	~makeSynthDef = {
+		var size = ~model.points.size;
+		~def = SynthDef("logread%x%".format(size, ~channels).asSymbol,
+			{ |bufnum, frameRate, loop = 0|
+				var	t = Impulse.kr(frameRate),
+				frames = BufFrames.kr(bufnum) / size,
+				framePlus = (0 .. size - 1),
+				frameCount = Demand.kr(t, 0, Dseq([Dseries(0, 1, frames)], inf)),
+				xymags = BufRd.kr(~channels, bufnum,
+					frameCount * size + framePlus,
+					loop: 0, interpolation: 1);
+				FreeSelf.kr((loop <= 0) * (frameCount >= (frames-1)));
+				xymags.do { |point, i|
+					SendReply.kr(t, '/coordlog', point, i);
+				};
+			}
+		).add;
+	};
+	~makeResponder = {
+		~resp = OSCFunc(e { |msg|
+			~model.points[msg[2]].addPoint(*msg[3..]).predict;
+			if(msg[2] + 1 == ~model.dim.squared) {
+				~model.predict;
+				~model.changed(\allPtsReceived);
+			};
+		}, '/coordlog', s.addr);
+	};
+	~freeCleanup = {
+		[~buf, ~resp].free;
+	};
+	~asPattern = {
+		Prout({
+			var thisbp = BP(~collIndex);
+			if(~synth.isNil) {
+				if(~endResp.notNil) { ~endResp.free };
+				~synth = Synth(~def.name, [bufnum: ~buf, frameRate: ~frameRate, loop: ~loop]);
+				~endResp = OSCFunc(
+					OSCArgsMatcher([~synth.nodeID], e { ~synth = nil; thisbp.stop(0) }),
+					'/n_end', s.addr
+				);
+			};
+			loop { 10.wait };
+		});
+	};
+	~stopCleanup = {
+		if(~synth.notNil) { ~synth.free; ~synth = nil };
+		~endResp.free;
+	};
+}) => PR(\soundFileReader);
 )
 
 // launch pd patch (too lazy to do by gui)
@@ -285,6 +349,25 @@ Proto({
 BP(#[mg, ml]).free;
 PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3));
 PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
+
+BP(\lp).free;
+PR(\soundFileReader).chuck(BP(\lp), nil, (model: BP(\ml), quant: 0, frameRate: 10));
+
+MT(1).gui;
+BP(\lp) => MT(1);
+
+BP(\lp).frameRate = 10;  // interesting - maybe not all data from pd come through?
+
+BP(\lp).play;
+BP(\lp).synth.trace;
+
+BP(\lp).quant = 0;
+
+BP(\lp).play;
+
+BP(\lp).model.points[0].listVars;
+
+BP(\ml).dependants.do { |dep| dep.instVarAt(1)[\allPtsReceived].def.dumpByteCodes }
 
 BP(\log).free;
 PR(\soundFileLogger).chuck(BP(\log), nil, (model: BP(\ml)));
@@ -467,3 +550,14 @@ BP(\mg).updateView = {
 
 
 ~pdAddr.tryPerform(\sendMsg, \onOffSwitch, 0)
+
+
+f = SoundFile.openRead("datalog110921_185859.aiff".resolveRelative);
+f.dump
+f.readData(d = FloatArray.newClear(f.numFrames * f.numChannels));
+f.close;
+
+5125 / 25
+205 / 50
+
+d
