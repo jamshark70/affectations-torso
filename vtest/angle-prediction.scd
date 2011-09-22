@@ -131,8 +131,8 @@ Proto({
 			};
 		};
 		~centroid = Point(
-			(centroidx / max(magsum, 1)).linlin(-1, 1, 0, 319),
-			(centroidy / max(magsum, 1)).linlin(-1, 1, 0, 239)
+			(centroidx / max(magsum, 1)), // .linlin(-1, 1, 0, 319),
+			(centroidy / max(magsum, 1)) // .linlin(-1, 1, 0, 239)
 		);
 		~magsum = magsum;
 		~normmag = magsum / ~maxmag;
@@ -205,7 +205,7 @@ PR(\motionGui).clone({
 	~updateView = {
 		var bounds = ~uview.bounds, ctr, pt;
 		pt = ~model.anglePoint;
-		ctr = ~model.centroid;
+		ctr = ~model.centroid * 0.5 + 0.5 * Point(319, 239);
 		Pen.color_(~angleColor)
 		.fillRect(Rect.aboutPoint(ctr, 6, 6))
 		.width_(4)
@@ -351,7 +351,7 @@ PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3));
 PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
 
 BP(\lp).free;
-PR(\soundFileReader).chuck(BP(\lp), nil, (model: BP(\ml), quant: 0, frameRate: 10));
+PR(\soundFileReader).chuck(BP(\lp), nil, (model: BP(\ml), quant: 0, frameRate: 8));
 
 MT(1).gui;
 BP(\lp) => MT(1);
