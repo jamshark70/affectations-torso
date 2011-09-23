@@ -11,7 +11,7 @@ u = SimpleController(BP(\ml)).put(\allPtsReceived, { |bp|
 
 a = m.play({ |kb = 0|
 	var x, y, mag, theta, sig;
-	#x, y, mag, theta = Lag.kr(In.kr(kb, 4), 0.15);
+	#x, y, mag, theta = VarLag.kr(In.kr(kb, 4), 0.15);
 	sig = PinkNoise.ar(mag.linlin(0, 1, 5, 15));
 	sig = BPF.ar(sig, y.linexp(-1, 1, 2500, 400), 0.1);
 	Pan2.ar(sig, x);
