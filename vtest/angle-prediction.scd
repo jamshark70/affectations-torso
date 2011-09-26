@@ -90,11 +90,18 @@ Proto({
 	~ptNum = 5;
 	~anglebufSize = 3;
 	~maxmag = 3000000;
+	~magThresh = 7000;
+	~kmSize = 2;
 	~prep = {
 		~points = Array(~dim.squared);
 		~dim.do { |xi|
 			~dim.do { |yi|
-				~points.add(PR(\regressionUnit).copy.put(\num, ~ptNum).prep(xi * 64, yi * 48));
+				~points.add(
+					PR(\regressionUnit).copy
+					.put(\num, ~ptNum)
+					.put(\magThresh, ~magThresh)
+					.prep(xi * 64, yi * 48)
+				);
 			};
 		};
 		~makeResponder.();
@@ -121,19 +128,23 @@ Proto({
 		~points.do { |pt| pt.plot };
 	};
 	~predict = {
-		var sum = Point(0, 0), centroidx = 0, centroidy = 0, magsum = 0;
+		var sum = Point(0, 0), temppt, centroidx = 0, centroidy = 0, magsum = 0;
+		~kmeans = KMeans(~kmSize);
 		~points.do { |p|
-			centroidx = centroidx + (p.xabs.linlin(0, 319, -1, 1) * p.mag.last);
-			centroidy = centroidy + (p.yabs.linlin(0, 239, -1, 1) * p.mag.last);
+			temppt = [p.xabs.linlin(0, 319, -1, 1), p.yabs.linlin(0, 239, -1, 1)];
+			centroidx = centroidx + (temppt[0] * p.mag.last);
+			centroidy = centroidy + (temppt[1] * p.mag.last);
 			magsum = magsum + p.mag.last;
 			if(p.predicted) {
 				sum = sum + (Point(p.new_x - p.x.last, p.new_y - p.y.last) * p.mag.last);
 			};
+			if(p.mag.last >= ~magThresh) { ~kmeans.add(temppt) };
 		};
 		~centroid = Point(
 			(centroidx / max(magsum, 1)), // .linlin(-1, 1, 0, 319),
 			(centroidy / max(magsum, 1)) // .linlin(-1, 1, 0, 239)
 		);
+		~kmeans.update;
 		~magsum = magsum;
 		~normmag = magsum / ~maxmag;
 		~anglebuf.wrapPut(~anglebufIndex, sum);
@@ -149,6 +160,7 @@ Proto({
 Proto({
 	~gridColor = Color.gray(0.6);
 	~pdAddr = NetAddr("127.0.0.1", 57122);
+	~noiseReduction = 64;
 	~prep = { |model|
 		~model ?? { ~model = model };
 		~model.predict;  // need to fill some variables in the model
@@ -183,11 +195,14 @@ Proto({
 			~updateView.();
 		});
 		// 100 == (320 - 120) / 2
-		~onoff = Button(~win, Rect(100, 245, 120, 20))
+		~onoff = Button(~win, Rect(2, 245, 88, 20))
 		.states_([["stopped"], ["running", Color.black, Color(0.6, 1.0, 0.6)]])
 		.action_(e { |view|
 			~pdAddr.tryPerform(\sendMsg, \onOffSwitch, view.value)
 		});
+		~noiseReduction = EZSlider.new(~win, Rect(92, 245, 318 - 92, 20), "nr", #[0, 127, \lin, 1], action: e { |view|
+			~pdAddr.tryPerform(\sendMsg, \noiseReduction, view.value)
+		}, initVal: ~noiseReduction, initAction: true, labelWidth: 30);
 		~win.front.refresh;
 		~win.onClose = e { BP(~collIndex).free };
 	};
@@ -200,7 +215,12 @@ PR(\motionGui).clone({
 	~angleColor = Color.gray;
 	~superPrep = ~prep;
 	~prep = {
+		var	colorTemp = [0.1, 0.1, 1.0];
 		~superPrep.();
+		~kmeansColors = Array.fill(~model.kmSize, {
+			colorTemp = colorTemp.rotate(1);
+			Color(*(colorTemp ++ #[0.4]))
+		});
 	};
 	~updateView = {
 		var bounds = ~uview.bounds, ctr, pt;
@@ -211,6 +231,11 @@ PR(\motionGui).clone({
 		.width_(4)
 		.line(ctr, ctr + Polar(bounds.height * 0.4 * ~model.normmag, atan2(pt.y, pt.x)).asPoint)
 		.stroke.width_(1);
+		~model.kmeans.centroids.do { |pair, i|
+			pair = pair * 0.5 + 0.5 * #[319, 239];
+			Pen.color_(~kmeansColors[i])
+			.fillOval(Rect.aboutPoint(Point(*pair), 16, 16));
+		};
 		~model.updatePoints;
 	};
 }) => PR(\motionAngleGui);
@@ -344,11 +369,15 @@ Proto({
 )
 
 // launch pd patch (too lazy to do by gui)
+// open this before creating BPs - the gui sends a /noiseReduction message on init
 "xdg-open %".format((thisProcess.nowExecutingPath.dirname +/+ "frame-diff5.pd").escapeChar($ )).unixCmd;
 
+BP(\mg).free;
 BP(#[mg, ml]).free;
 PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3));
 PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
+
+BP(\ml).kmeans.centroids.do(_.postln); ""
 
 BP(\lp).free;
 PR(\soundFileReader).chuck(BP(\lp), nil, (model: BP(\ml), quant: 0, frameRate: 8));
