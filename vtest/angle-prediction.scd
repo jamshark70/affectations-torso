@@ -138,7 +138,9 @@ Proto({
 			if(p.predicted) {
 				sum = sum + (Point(p.new_x - p.x.last, p.new_y - p.y.last) * p.mag.last);
 			};
-			if(p.mag.last >= ~magThresh) { ~kmeans.add(temppt) };
+			// 0.75 = y-extent / x-extent
+			// preserve the same aspect ratio in kmeans
+			if(p.mag.last >= ~magThresh) { ~kmeans.add(temppt * #[1, 0.75]) };
 		};
 		~centroid = Point(
 			(centroidx / max(magsum, 1)), // .linlin(-1, 1, 0, 319),
@@ -232,7 +234,7 @@ PR(\motionGui).clone({
 		.line(ctr, ctr + Polar(bounds.height * 0.4 * ~model.normmag, atan2(pt.y, pt.x)).asPoint)
 		.stroke.width_(1);
 		~model.kmeans.centroids.do { |pair, i|
-			pair = pair * 0.5 + 0.5 * #[319, 239];
+			pair = pair * 0.5 + 0.5 * #[319, 319];
 			Pen.color_(~kmeansColors[i])
 			.fillOval(Rect.aboutPoint(Point(*pair), 16, 16));
 		};
