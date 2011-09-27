@@ -12,31 +12,11 @@
 var	mypath = thisProcess.nowExecutingPath, indices;
 if(BP.exists(\transports)) { BP(\transports).free };
 
-value {
-	var p, l;
-	Library.at(\isJamesBox) ?? {
-		try {
-			p = Pipe("hostname", "r");
-			if(p.isOpen) {
-				l = p.getLine;
-				if(l.notNil) { Library.put(\isJamesBox, l.contains("dlm")) }
-				{ Library.put(\isJamesBox, false) };
-			};
-			p.close;
-		} { p.tryPerform(\close) };  // make sure pipe gets closed even on error
-	};
-};
-
 s = Server.local;
 s.waitForBoot {
 	var	cond = Condition.new;
 
-	// s.controlBusAllocator.reserve(4000, 96, warn: false);
-	// if(s.controlBusAllocator.size != 4000) {
-	// 	s.controlBusAllocator = ContiguousBlockAllocator(4000, 0);
-	// };
-
-	(mypath.dirname.dirname +/+ "/common/common-defs.scd").loadPath;
+	(mypath.dirname.dirname +/+ "/common/common-defs.scd").debug("common").loadPath;
 	NotificationCenter.registerOneShot(\lcrvb, \lcrvbexists, \feetSeq, {
 		cond.unhang;
 	});
@@ -157,6 +137,11 @@ s.waitForBoot {
 		indices = indices.add(~sections.size);
 		~sections = ~sections ++ result;
 	};
+
+	NotificationCenter.registerOneShot(\cavrvb, \cavrvbexists, \feetSeq, {
+		cond.unhang;
+	});
+	cond.hang;
 
 	~seq = PR(\affSectSeq).copy.sections_(~sections).startLoadingAt_(indices);
 

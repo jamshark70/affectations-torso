@@ -97,6 +97,136 @@ free: {
 	};
 	[~cb, ~mb, ~target].free
 }, type: \voicer) => Fact(\armsChordVC);
+
+(keys: #[master, glrvbmc, lcrvbmc],
+numRows: 8,
+numCols: 8,
+env: Env.adsr(1, 0.4, 0.8, 1.2, curve: -2),
+fenv: Env.one,
+graphInsert: nil,
+globalFilter: true,
+makeTempAmps: {
+	{ |i| Array.triangleAmps((20000 / ((4+i) * 12).midicps).asInteger) } ! ~numRows
+},
+randomizeAmps: { |amps|
+	amps + ({ 0.12.rand2 } ! amps.size)
+},
+bufmod: {
+	var	rate = Rand(0.7, 1.4),
+		dur = rate.reciprocal,
+		pulse = Impulse.kr(rate),
+		buf = Demand.kr(pulse, 0, Dseq([
+			Dwhite(0.0, ~numCols * 0.25, 1),
+			Dwhite(~numCols * 0.7, ~numCols-1.001, 1)
+		], inf));
+	EnvGen.kr(Env([Rand(~numCols * 0.7, ~numCols-1.001), buf], [dur]), pulse)
+},
+spatialize: true,
+make: { |name|
+	var	tempAmps = ~makeTempAmps.(),
+		ugenfunc,
+		out;
+
+	~target = MixerChannel(name, s, 2, 2, outbus: ~master, completionFunc: { |chan|
+		var	patch = chan.playfx(Instr("busfx.chorus2"), [0, 2, 2, 3, 0.006957213735427, 0.1708276390401, 0.0034747717625074, 1.1689647098094, 0.3]);
+		patch.doWhenPlaying({
+			patch.synth.moveToTail(chan.effectgroup);
+		});
+		MultiEQ(2, \eq, 449.278, -5.036.dbamp, 1.599/*, \eq, 5270.139, 1.583.dbamp, 1*/)
+		.play(chan);
+	});
+	[~glrvbmc, ~lcrvbmc].do { |mc|
+		mc.tryPerform(\receivesSignalFrom, ~target);
+	};
+
+		// generate a matrix of buffers
+		// if numCols is 8, 0-7 have the most partials, 8-15 have fewer, etc.
+		// each column is randomized differently for more animation in higher partials
+		// bufmod in the WrapInstr affects rows - columns chosen by frequency mapping
+	~bufs = Buffer.allocConsecutive(~numRows * ~numCols, s, 2048, 1);
+	fork {
+		~bufs.do({ |buf, i|
+			var	amps = tempAmps[i div: ~numCols];
+0.06.wait;
+			buf.sine1(~randomizeAmps.(amps, i))
+		});
+"done generating buffers".debug;
+	};
+
+	WrapInstr([\osc2, \vosc3matrix], { arg freq, gate, bufbase, bufmod, env, vsens, detune,
+		ffreq, rq, fenv, fenvsens = 1,
+		numrows, numcols, basefreq, topfreq,
+		attackTimeScale, decayTimeScale;
+		var	sig1, sig2, amp, buf;
+		var	baselog = log2(basefreq),
+			freqmap = ((log2(freq) - baselog) * (numrows / (log2(topfreq) - baselog)))
+				.clip(0, numrows - 2.001),
+			fmapfloor = freqmap.floor,
+			fmapfrac = freqmap - fmapfloor,
+			detunedown = freq/detune,
+			detuneup = freq*detune,
+			// env timescale handling: [0] is filter eg, [1] is amp
+			envs = LocalIn.kr(2),
+			eg_test = envs.collect { |eg| Select.kr(Impulse.kr(0), [eg, 0]) },
+			// once envelope starts going down, attack phase is over
+			hit1 = PulseCount.kr(HPZ1.kr(eg_test) < 0) > 0,
+			timeScales = Select.kr(hit1, [attackTimeScale, decayTimeScale]);
+		amp = Latch.kr(Sensitivity.kr(1, gate, vsens), gate);
+		buf = bufbase + (fmapfloor * numcols) + bufmod;
+		#sig1, sig2 = VOsc3.ar([buf, buf+numcols], detunedown, freq, detuneup);
+		eg_test = [fenv, env].collect { |e, i|
+			EnvGen.kr(e.dereference.value, gate, timeScale: timeScales[i], doneAction: 2 * i);
+		};
+		LocalOut.kr(eg_test);
+		ffreq = (ffreq * Sensitivity.kr(1, eg_test[0], fenvsens)).clip(20, 20000);
+		RLPF.ar(XFade2.ar(sig1, sig2, fmapfrac.madd(2, -1), amp),
+			ffreq, rq, mul: eg_test[1]);
+	}, [\freq, \amp, #[0, 1000, \linear, 1, 0], #[0, 20], EnvSpec(Env.adsr), #[0, 1], #[0.9, 1.1, \linear, 0, 1], \freq, #[1, 0.001], EnvSpec(Env.one), nil, #[0, 20, \lin, 1, 0], #[0, 20, \lin, 1, 0], \freq, \freq, #[0.01, 10, \exp, 0, 1], #[0.01, 10, \exp, 0, 1]]);
+
+	~defname = (name ++ "def").asSymbol;
+	ugenfunc = { |pan, finalAmp = 1, freq = 440, freqlag = 0, gate = 1, ffreq = 14000, rq = 1, vsens = 0.8, fenvsens = 1, attackTimeScale = 1, decayTimeScale = 1|
+		var	sig = WrapInstr("osc2.vosc3matrix").valueArray([
+			Lag.kr(freq, freqlag), gate,
+			~bufs[0].bufnum,  // bufbase
+			~bufmod,
+			~env,
+			vsens, /*detune:*/ 1.003,
+			ffreq, rq, ~fenv, fenvsens,
+			~numRows, ~numCols,
+			/*basefreq:*/ 48.midicps, /*topfreq:*/ (11*12).midicps,
+			attackTimeScale, decayTimeScale
+		]);
+		~graphInsert !? { sig = ~graphInsert.(sig) };
+		Pan2.ar(sig, pan, finalAmp)
+	};
+	if(~spatialize != false) {
+		\addRvbOut.eval(~defname, ugenfunc).add;
+	} {
+		SynthDef(~defname, { |outbus|
+			Out.ar(outbus, SynthDef.wrap(ugenfunc))
+		}).add;
+	};
+	SynthDescLib.at(~defname).msgFuncKeepGate = true;
+
+	out = Voicer(50, ~defname, target: ~target);
+
+	if(~globalFilter) {
+		out.mapGlobal(\ffreq, nil, 14000, \freq);
+		out.mapGlobal(\rq, nil, 1.0, \myrq);
+	};
+	// out.mapGlobal(\fenvsens, nil, 1.0, #[0.1, 15, \exp]);
+	
+	// ~target.doWhenReady({ |chan|
+	// 	chan.playfx({ |outbus|
+	// 		RLPF.ar(In.ar(outbus, 1),
+	// 			out.globalControls[\ffreq].kr, 
+	// 			out.globalControls[\rq].kr
+	// 		)
+	// 	})
+	// });
+	
+	out
+}, free: { [~target, ~bufs].free }, type: \voicer) => Fact(\shimmerpad);
 );
 
 s.doWhenBooted {
@@ -105,10 +235,48 @@ s.doWhenBooted {
 	};
 	if(~cavernousRvb.isPlaying.not) {
 		~cRvbMc.doWhenReady {
-			~cavernousRvb = ~cRvbMc.playfx(Instr("busfx.freeverb2"), [0, 1/*0.69354838132858*/, 0.90322577953339, 0.5, 1.0])
-		}
+			~cavernousRvb = ~cRvbMc.playfx(Instr("busfx.freeverb2"), [0, 1/*0.69354838132858*/, 0.90322577953339, 0.5, 1.0]);
+			~cavernousRvb.doWhenPlaying {
+				NotificationCenter.notify(\cavrvb, \cavrvbexists.debug("sending notification"));
+			};
+		};
 	};
 };
+
+PR(\funcCmd).copy.putAll((
+	setDoneSignal: {
+		~doneSignal = Updater(~subIter, e { |obj, what, cmds|
+			// "subIterCmd '%' got update: %".format(~id, [what, cmds]).debug;
+			if(what == \done) {
+				~doneSignal.remove;
+				// "Updater calling ~stop".debug;
+				~stop.((activeCmds: cmds))
+			};
+		});
+		~setUserSignal.();
+	},
+	clock108: topEnvironment[\clock108],
+	func: {
+		~subIter.play(argClock: ~clock108 ? TempoClock.default);
+	},
+	done: { |parms|
+		// oh, this is REALLY f*ked up
+		// if the subiterator stops, the Updater fires FROM WITHIN THE ROUTINE
+		// then this forcibly stops the routine early
+		// causing this func never to return
+		// that interrupts the subIterCmd's cleanup process
+		// how many gray hairs from trying to find THAT one?
+		// I tried to fix it in TLSequenceIterator but maybe it didn't take, so...
+		if(~subIter.isRunning) { ~subIter.stop(parms) };
+	},
+	clearDoneSignal: { |parms|
+		~doneSignal.remove;
+		~doneSignal = nil;
+		~clearUserSignal.(parms);
+	},
+	findActive: { |id, thisCmd| ~subIter.findActive(id, thisCmd) },
+	collIndex: \subIterCmd  // chuck => PR doesn't automatically set this
+)) => PR(\subIterCmd);
 
 (
 //keys: #[master, glrvbmc, lcrvbmc],
