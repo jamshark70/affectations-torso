@@ -1,7 +1,24 @@
 
 // ~master = MixerChannel(\master, s, 2, 2);
 
+(
 z = PeakMonitor(~master);
+
+u.remove;
+u = Updater(z, { |obj|
+	var i = 2;
+	if(z.peaks.any(_ > 1)) {
+		u.remove;
+		s.volume.mute;
+		// OSCFunc({ |msg|
+		// 	topEnvironment[\scanTree].value(2, msg);
+		// }, '/g_queryTree.reply', s.addr).oneShot;
+		// s.sendMsg(\g_queryTree, 1, 0);
+	};
+});
+)
+
+
 
 // assumes 'i' points to a node ID; see Server Command Reference
 ~scanTree = { |i, msg|
@@ -24,20 +41,6 @@ z = PeakMonitor(~master);
 	};
 	i
 };
-
-
-
-u.remove;
-u = Updater(z, { |obj|
-	var i = 2;
-	if(z.peaks.any(_ > 1)) {
-		u.remove;
-		OSCFunc({ |msg|
-			topEnvironment[\scanTree].value(2, msg);
-		}, '/g_queryTree.reply', s.addr).oneShot;
-		s.sendMsg(\g_queryTree, 1, 0);
-	};
-});
 
 
 OSCFunc({ |msg| msg.postcs }, '/g_queryTree.reply', s.addr).oneShot;
