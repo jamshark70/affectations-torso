@@ -15,8 +15,7 @@ if(BP.exists(\transports)) { BP(\transports).free };
 s = Server.local;
 s.waitForBoot {
 	var	cond = Condition.new;
-
-	(mypath.dirname.dirname +/+ "/common/common-defs.scd").debug("common").loadPath;
+	(mypath.dirname.dirname +/+ "/common/common-defs.scd").loadPath;
 	NotificationCenter.registerOneShot(\lcrvb, \lcrvbexists, \feetSeq, {
 		cond.unhang;
 	});
@@ -143,7 +142,8 @@ s.waitForBoot {
 	});
 	cond.hang;
 
-	~seq = PR(\affSectSeq).copy.sections_(~sections).startLoadingAt_(indices);
+	~seq = PR(\affSectSeq).copy.sections_(~sections).startLoadingAt_(indices)
+	.oscLoggingOn_(false);
 
 	~seq.loadResources(0);
 	PR(\transports).chuck(BP(\transports), nil, (model: ~seq));

@@ -227,6 +227,171 @@ make: { |name|
 	
 	out
 }, free: { [~target, ~bufs].free }, type: \voicer) => Fact(\shimmerpad);
+
+// this voicer is more synth-y, use later in the section
+(keys: #[master, glrvbmc, lcrvbmc],
+env: Env.adsr(0.4, 0, 1, 1.2),
+bufenv: Env.zero,
+isMono: true,
+harmonicAmps: { |numharm|
+	var	array = Array.triangleAmps(numharm),
+	tweak = ((numharm div: 5) + 1 .. (numharm-1)), i;
+	min(10, numharm div: 5).do {
+		i = tweak.takeAt(tweak.size.rand);
+		if(i.notNil) {
+			array[i] = array[i] * exprand(2.5, 6.0) * (i+1);
+		};
+	};
+	array
+},
+make: { |name|
+	var	out, initArgs;
+	~wt = \makeWavetables.eval(8, s, 2048, 48, ~harmonicAmps);
+	~target = MixerChannel(name, s, 2, 2, outbus: ~master, completionFunc: { |chan|
+		// eq?
+		~chorus = chan.playfx(WrapInstr("busfx.chorus2"), [0, 2, 2, 3, 0.01285261232269, 0.077426358822457, 0.00860870962377, 0.87266466760906, 0.15647481535888]);
+	});
+	[~glrvbmc, ~lcrvbmc].do { |mc| mc.tryPerform(\receivesSignalFrom, ~target) };
+
+	out = \addRvbOut.eval(name ++ "Def", { |freq, freqlag = 0.1,
+		vsens = 0.84722220897675, detune = 1.003, bufbase = 0,
+		ffreq = 2423, rq = 1, pan, gate = 1, ampMul = 1|
+		var	laggedfreq = Lag.kr(freq, freqlag),
+			// bufbase = ~wt.first.bufnum,
+			numbufs = ~wt.size,
+			basefreq = 48.midicps,
+			topfreq = 132.midicps,
+			baselog = log2(basefreq),
+			freqmap = ((log2(laggedfreq) - baselog) / (log2(topfreq) - baselog)
+				* (numbufs - 1)).clip(0, numbufs - 1.001),
+			amp = Latch.kr(Sensitivity.kr(1, gate, vsens), gate),
+			buf = bufbase + freqmap + EnvGen.kr(~bufenv, gate),
+			sig = VOsc3.ar(buf, laggedfreq/detune, laggedfreq, laggedfreq*detune, amp)
+				* EnvGen.kr(~env.value, gate, doneAction:2);
+		Pan2.ar(RLPF.ar(sig, ffreq, rq), pan, ampMul)
+	}, nil, if(~isMono, { (nil!5) ++ #[0.1, 0.1] }, nil), ~isMono).add;
+	SynthDescLib.at(out.name.asSymbol).msgFuncKeepGate = true;
+
+// 	out = MonoPortaVoicer(1, WrapInstr("osc2.vosc3mapfporta"), [bufbase: `(~wt.first.bufnum), numbufs: `(~wt.size), basefreq: `(48.midicps), topfreq: `(132.midicps), env: Env.adsr(0.4, 0, 1, 1.2), ffreq: 2423.054873855, rq: 1, vsens: 0.84722220897675, detune: 1.003], target: ~target);
+	initArgs = [ffreq: 2423.054873855, rq: 1, vsens: 0.84722220897675, detune: 1.003,
+		bufbase: ~wt.first.bufnum];
+	if(~isMono) {
+		out = MonoPortaVoicer(1, out.name, initArgs, target: ~target);
+	} {
+		out = Voicer(25, out.name, initArgs, target: ~target);
+	};
+	// no global maps - this is mostly to generate the synthdef
+// 	SynthDescLib.at(out.nodes[0].defname.asSymbol).msgFuncKeepGate = true;
+	out
+},
+free: {
+	[~glrvbmc, ~lcrvbmc].do { |mc| mc.tryPerform(\stopsReceivingFrom, ~target) };
+	[~target, ~wt].free
+},
+maps: { |self| self[\value].globalControls.collectAs({ |gc| if(gc.name != \detune) { [gc.name, gc.asMap] } }, Array).select(_.notNil).flat },
+type: \voicer) => Fact(\armsmelVC);
+
+PR(\abstractProcess).clone {
+	~event = (eventKey: \monoSupportData, immediateOSC: true,
+		vizKeys: Library.at(\defaultVizKeys).copy.put(5, \ampMul), soundID: 0);
+	~vcKey = \am;
+	~prep = {
+		if(VC.exists(~vcKey).not) {
+			"VC(%) doesn't exist. Please create it before using BP(%)."
+				.format(~vcKey.asCompileString, ~collIndex.asCompileString).die;
+		};
+		~event.putAll((
+			glrvbout: VC(~vcKey).env[\glrvbmc].tryPerform(\inbus),
+			lcrvbout: VC(~vcKey).env[\lcrvbmc].tryPerform(\inbus),
+			distNear: 5, distFar: 20,
+			bufbase: VC(~vcKey).env[\wt].first.bufnum
+		));
+		~makeStreamForKey.(\level);
+		currentEnvironment
+	};
+	~alwaysReset = true;
+	~pan = 0;
+	~distance = 17;
+
+	~rewriteProb = 0.3;
+	~phrases = [
+		#[2, 5, 4],
+		#[2, 7, 6, 4, 8],
+		#[2, 5, 6, 4],
+		#[9, 8, 3],
+		#[8, 11, 10, 5, 2, 3, 4],
+		#[-2, -5, 0, 1, 0, 4]
+	];
+	~degree = Plazy({
+		var	self = currentEnvironment;
+		Pswitch(
+			~phrases.collect { |row|
+				PR(\rewriter).copy.prep(Pseq(row, 1), Pfuncn(e { ~levelStream.next }, 1), [
+					(_.notNil) -> { |item, level, inval|
+						if(self[\rewriteProb].coin) {
+							item + [0, rrand(1, 3) * #[-1, 1].choose].rotate(2.rand)
+						} { [item] }
+					}
+				])
+			},
+			\patRejectLastN.eval(Pseq([0, 1, 2, Prand((0 .. (~phrases.size-1)), inf)]), 1)
+		)
+	});
+
+	~dur = Pwrand(#[1, 2], #[0.9, 0.1], inf);
+// 	~legato = Pwrand(#[1.01, 0.9, 0.4], #[0.7, 0.2, 0.1], inf); // 1.01;
+	~gate = 0.8;
+	~amp = -14.dbamp;
+	~freqlag = 0.3;
+	~detune = 1.003;
+	~level = (Pn(0, 3) ++ Pexprand(0.01, 2.99, inf).collect(_.asInteger));
+	~ffreq = Pexprand(2300, 8000, inf);
+	~rq = Pexprand(0.1, 1.0, inf);
+	~root = 67;
+	~scaleRoot = 7;
+
+	~recvEventNotify = { |node| ~node = node };
+	~stopCleanup = { if(~node.notNil) { ~node.release }; ~node = nil };
+	~asPattern = {
+		Pbind(
+			\instrument, VC(~vcKey).v.nodes[0].defname.asSymbol,
+//			\level, BPStream(\level),
+			\node, Pfunc { ~node ?? { 0 } },
+			\protoEvent, Pif(Pfunc { ~node.isNil },
+				\singleSynthPlayNotifyData,
+				\singleSynthTriggerData
+			),
+			\root, BPStream(\scaleRoot),
+			\midi, (BPStream(\degree).degreeToKey(#[0, 2, 4, 5, 7, 9, 11]) + BPStream(\root)),
+			\freq, Pkey(\midi).midicps,
+			\delta, BPStream(\dur),
+// 			\legato, BPStream(\legato),
+			\freqlag, BPStream(\freqlag),
+			\detune, BPStream(\detune),
+			\gate, BPStream(\gate),
+			\ffreq, BPStream(\ffreq),
+			\rq, BPStream(\rq),
+			\pan, BPStream(\pan),
+			\distance, BPStream(\distance),
+			\chan, VC(\am).env.target,
+			\ampMul, BPStream(\amp)
+		).collect { |ev| ~lastEvent = ev; ev }
+		// now this is a problem - you don't know when the next trigger is,
+		// so you don't know when to release
+		// removing for now
+// 		.collect { |ev|
+// 			if(~node.notNil and: { ev[\legato] < 1 }) {
+// 				\schedEventBundleArray.eval(ev[\lag] ? 0, ev[\timingOffset] ? 0,
+// 					ev[\server] ?? { Server.default },
+// 					[~node.releaseMsg], nil, true
+// 				);
+// 				~node = nil;
+// 			};
+// 			ev
+// 		};
+	};
+	~reset = Func(\resetBPStreams).v;
+} => PR(\melody);
 );
 
 s.doWhenBooted {
@@ -240,6 +405,8 @@ s.doWhenBooted {
 				NotificationCenter.notify(\cavrvb, \cavrvbexists.debug("sending notification"));
 			};
 		};
+	} {
+		NotificationCenter.notify(\cavrvb, \cavrvbexists.debug("sending notification (already playing)"));
 	};
 };
 
