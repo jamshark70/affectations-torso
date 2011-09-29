@@ -3,12 +3,6 @@
 // last 5/10 centroids in opposite side (l/r)
 // and y is low
 
-u.remove;
-u = SimpleController(BP(\ml));
-
-u.put(\allPtsReceived, { |obj|  // obj === BP(\ml)
-	
-});
 
 (
 Proto({
@@ -103,7 +97,7 @@ p.insp
 
 OSCFunc({ |msg| s.sendMsg(\n_trace, msg[1]) }, '/n_go', s.addr).oneShot;
 
-/*
+
 (
 BP(\t2000trig).checkX = 3;
 BP(\t2000trig).respond = { |obj|
@@ -155,7 +149,7 @@ BP(\t2000trig).respond = { |obj|
 	event.play;
 };
 )
-*/
+
 
 (
 var bp = BP(\tton);
@@ -190,3 +184,107 @@ BP(\t2000trig).respond = { |obj|
 };
 
 BP(\tton).mayRelease = true
+
+
+
+// t2010: first, detect wild motion
+// kmeans centroids are above a certain distance apart
+
+BP(\ml).kmeans.centroids  // if not enough motion, this is empty
+
+(
+BP(\t2010).free;
+
+PR(\viztrig).clone({
+	~model = BP(\ml);
+	~keep = 5;
+	~reqd = 2;
+	~last = Array.fill(~keep, 0);
+	~i = 0;
+	~wildThresh = 0.8;
+	// ~userprep?
+
+	~wildFire = 0; // trigger main sequence event
+
+	~respond = {
+		var	ct = ~model.kmeans.centroids;
+		if(ct.size == 2) {
+			~last[~i] = (ct[1] - ct[0]).squared.sum.sqrt; // sqrt(dx**2 + dy**2)
+			~last[~i].debug("distance");
+
+			if(
+				~every.(~last, ~i - ~reqd + 1, ~i, _ > ~wildThresh)
+				and: { ~every.(~last, ~i - ~keep + 1, ~i - ~reqd, _ <= ~wildThresh) }
+			) {
+				~wildFire.();
+			};
+
+			~i = (~i + 1) % ~keep;
+		} {
+			~last = Array.fill(~keep, 0);
+			~i = 0;
+		};
+	};
+
+	~every = { |array, i1, i2, func|
+		block { |break|
+			(i1..i2).do { |i|  // this does not make an array
+				if(func.value(array.wrapAt(i)).not) { break.(false) };
+			};
+			true
+		};
+	};
+}) => BP(\t2010);
+)
+
+BP(\t2010).use {
+	~keep = 5;
+	~reqd = 2;
+	~last = Array.fill(~keep, 0);
+	~i = 0;
+	~wildThresh = 0.8;
+};
+
+BP(\t2010).respond = {
+	var	ct = ~model.kmeans.centroids;
+	if(ct.size == 2) {
+		~last[~i] = (ct[1] - ct[0]).squared.sum.sqrt; // sqrt(dx**2 + dy**2)
+		~last[~i].debug("distance");
+
+		if(
+			~every.(~last, ~i - ~reqd + 1, ~i, _ > ~wildThresh)
+			and: { ~every.(~last, ~i - ~keep + 1, ~i - ~reqd, _ <= ~wildThresh) }
+		) {
+			(
+				instrument: d.name.asSymbol,
+				freq: (#[0, 2, 4] + rrand(28, 42)).degreeToKey(#[0, 2, 4, 5, 7, 9, 11], 12).midicps,
+				pan: 0,
+				gate: 0.05,
+				sustain: 0.07, 
+				vsens: 1,
+				ffreq: 3000,
+				parent: ProtoEvent(\polySynthPlayer).v,
+				immediateOSC: true
+			).play;
+		};
+
+		~i = (~i + 1) % ~keep;
+	} {
+		~last = Array.fill(~keep, 0);
+		~i = 0;
+	};
+};
+
+// efficiency: don't create arrays when not needed
+BP(\t2010).every = { |array, i1, i2, func|
+[array, i1, i2, func].debug(">> every");
+	block { |break|
+		(i1..i2).do { |i|  // this does not make an array
+			if(func.value(array.wrapAt(i)).not) { break.(false) };
+		};
+		true
+	}.debug("<< every");
+};
+
+
+BP(\t2010).listVars
