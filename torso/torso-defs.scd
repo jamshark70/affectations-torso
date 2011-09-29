@@ -1731,6 +1731,7 @@ make: { |name|
 PR(\abstractProcess).clone {
 	~event = (eventKey: \polySynthPlayNotifyData);
 	~alwaysReset = true;  // for fx
+	~mayRelease = false;  // caller will set this true when it's time to clean up
 
 	~gate = Pexprand(0.08, 0.2, inf);
 	~attackTimeScale = Pkey(\gate).linlin(0.01, 1.0, 5, 0.5);
@@ -1815,7 +1816,7 @@ PR(\abstractProcess).clone {
 					self.use {
 						obj.removeDependant(endFunc);
 						~nodes.remove(obj);
-						if(~nodes.isEmpty and: { ~isPlaying.not and: { ~fxSynth.notNil } }) {
+						if(~nodes.isEmpty and: { ~mayRelease and: { ~fxSynth.notNil } }) {
 							~fxSynth.free;
 							~fxSynth = nil;
 							~event[\voicer].globalControls[\bufmod].stopWatching.stopAuto;

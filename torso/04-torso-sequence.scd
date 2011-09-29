@@ -14,50 +14,8 @@
 			VC(\tton).free; BP(\tton).free;
 		},
 		seqPattern: {
-			var	headChans = IdentitySet.new,
-				fadeCmds;
-			#[drum1, drum2, drum3, drum4, drum5, drum6, drum7, drum8].do { |key|
-				if(BP.exists(key) and: { BP(key)[\chan].notNil }) {
-					headChans.add(BP(key)[\chan])
-				};
-			};
-			if(headChans.notEmpty) {
-				fadeCmds = [\mixerAutoSynthCmd, 
-					headChans.asArray.collect { |chan|
-						(mixer: chan, name: \ctlPoint, outName: \outbus,
-							value: 0, time: 18, curve: -2.1)
-					}
-				].flop.flat;
-			};
-			if(#[wtrig, cwd].any { |key| BP.exists(key) }) {
-				fadeCmds = fadeCmds ++ [\gcAutoSynthCmd, 
-					BP(#[wtrig, cwd]).collect { |bp|
-						(gc: bp.ampCtl, name: \ctlPoint, outName: \outbus,
-							value: 0, time: 18, curve: -2.1)
-					}
-				].flop.flat
-			};
-			if(fadeCmds.size > 0) {
-				fadeCmds = fadeCmds ++ [
-					\sync,
-					{
-						BP(#[drum1, drum2, drum3, drum4, drum5, drum6, drum7, drum8, wtrig]).stop(0);
-						0 // 10
-					}
-				]
-			};
-			fadeCmds.postln;
 			Pn((
 				sequence: [
-					{
-						BP(\hsd).stop(0);
-						if(fadeCmds.size > 0) {
-							TLSequenceIterator(fadeCmds) //.shouldSync_(false)
-						} { 0 }
-					},
-					funcCmd: (
-						func: { ~iterator.findActive(\loop56).stop }
-					),
 					subIterCmd: (
 						clock108: TempoClock.default, //thisThread.clock,
 						shouldSync: false,
