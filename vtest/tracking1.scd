@@ -27,14 +27,16 @@ Proto({
 		currentEnvironment
 	};
 	~freeCleanup = {
-		~resp.remove;
+		~resp.debug("removing dependant").remove;
 		~userfree.();
 	};
 	~makeListener = {
-		~resp = SimpleController(~model)
+~model.dependants.debug(">> makeListener");
+		~resp = SimpleController(~model.debug("making dependant for"))
 		.put(~listenKey, e { |obj, what ... moreArgs|
 			~respond.valueArray(obj, what, moreArgs)
 		});
+~model.dependants.debug("<< makeListener");
 	};
 }) => PR(\viztrig);
 )
@@ -206,26 +208,57 @@ BP(\tton).mayRelease = true
 
 BP(\ml).kmeans.centroids  // if not enough motion, this is empty
 
+BP(\ssd).gcs.pan.autoSynth.trace
+
 (
-BP(\t2010).free;
+//BP(\t2010).free;
 
 PR(\viztrig).clone({
 	~model = BP(\ml);
+	~soloproc = \ssd;
+	~panMulAdd = #[1, 0];
 	~keep = 5;
 	~reqd = 2;
 	~i = 0;
+	~filterMagThresh = 0.3;
 	~wildThresh = 0.65;
 	~magThresh = 0.6;
 	~wildDuration = 4;
 	~lastWildTime = 0;
+	~ffreqIsOverridden = false;
 	
 	~userprep = {
 		~last = Array.fill(~keep, 0);
+
+		~panCtl = BP(~soloproc).gcs[\pan];
+		~panLag = ~panCtl.automate({ |pan = 0, lag = 0.15|
+			VarLag.kr(pan, lag).madd(*(~panMulAdd));
+		});
+
+		~ffreqCtl = BP(~soloproc).gcs[\ffreq];
+		~ffreqUpd = Updater(BP(~soloproc), e { |obj, what, node, event|
+			var	nodeupd;
+			if(what == \node and: { event[\synthKey] == \ffreq }) {
+				if(~ffreqIsOverridden) {
+					NodeWatcher.register(node);
+					nodeupd = SimpleController(node).put(\n_end, e {
+						nodeupd.remove;
+						~ffreqIsOverridden = false;
+					});
+				};
+			};
+		});
+	};
+
+	~userfree = {
+		if(~panCtl.autoSynth === ~panLag) { ~panCtl.stopAuto };
+		~ffreqUpd.remove;
 	};
 
 	~wildFire = {
 		 // trigger main sequence event
 		if(BP.exists(\segTrig)) {
+			BP(~soloproc).unOverride(\synth);
 			BP(\segTrig).eventTrigAction;
 		};
 	};
@@ -252,6 +285,11 @@ PR(\viztrig).clone({
 		};
 
 		// x -> pan, sth -> filter
+		~panLag.set(\pan, ~model.centroid.x);
+		if(~model.normmag >= ~filterMagThresh and: { ~ffreqIsOverridden.not }) {
+			BP(~soloproc).override(\synth, Pn(\ffreq, 1));
+			~ffreqIsOverridden = true;
+		};
 	};
 
 	~every = { |array, i1, i2, func|
@@ -262,8 +300,38 @@ PR(\viztrig).clone({
 			true
 		};
 	};
-}) => BP(\t2010);
+}) => PR(\t2010trig);
 )
+
+// this is very seriously fucked up
+// PR(\t2010trig).model === BP(\ml) but
+// PR(\t2010trig).model.dependants !== BP(\ml).dependants during init
+// but it all works if I pass in the model at chuck time
+// IOW, "identical" means "not-identical"... my head hurts
+BP(\t2010).free; PR(\t2010trig).chuck(BP(\t2010), nil, (model: BP(\ml)));
+
+BP(\t2020).free; PR(\t2010trig).chuck(BP(\t2020), nil, (model: BP(\ml), soloproc: \ssd2, panMulAdd: #[-1, 0]));
+
+BP(\ssd).gcs.pan.autoSynth.trace
+
+BP.exists(\t2010)
+BP(\t2010).model.centroid
+
+PR(\t2010trig).v[\prep].postcs
+PR(\t2010trig).v[\makeListener].postcs
+PR(\t2010trig).v[\listenKey].postcs
+
+BP(\ml).dependants.includes(BP(\t2010).resp);
+
+BP(\ml).dependants
+PR(\t2010trig).v[\model].dependants
+
+.inspect
+
+x = SimpleController(BP(\ml));
+x.remove;
+
+Window.allWindows.do { |w| w.name.postln }; ""
 
 BP(\t2010).use {
 	~keep = 5;
