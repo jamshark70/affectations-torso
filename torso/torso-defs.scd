@@ -1567,8 +1567,8 @@ make: { |name|
 			ffreq: Pexprand(5.5, 10.0, inf),
 			pan: Pexprand(5.5, 10.0, inf)
 		)),
-		synth: Pwxrand(#[distance, pan, center, ffreq, speed/*, amp*/],
-			#[4, 1, 2, 1, 3/*, 2*/].normalizeSum, inf),
+		synth: Pwxrand(#[distance, /*pan,*/ center, ffreq, speed/*, amp*/],
+			#[4, /*1,*/ 2, 1, 3/*, 2*/].normalizeSum, inf),
 		objects: { (
 			distance: (
 				def: \ctlEnv,
@@ -1687,7 +1687,8 @@ make: { |name|
 			if(ev[\instrument] == ~noiseDef) {
 				~freeNoise.();	// release the old one, jes' in case
 				~noiseSynth = node;
-			}
+			};
+			BP(~collIndex).changed(\node, node, ev);
 		},
 		freeNoise: {
 			~noiseSynth !? {
