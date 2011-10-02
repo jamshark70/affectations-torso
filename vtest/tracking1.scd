@@ -5,6 +5,20 @@
 
 
 (
+s.waitForBoot {
+	WrapInstr("analog.sawpulsepan", { |pan = 0|
+		Pan2.ar(WrapInstr.wrap("analog.sawpulse", []), pan)
+	}, [\bipolar]);
+
+	p = WrapPatch("analog.sawpulsepan", [nil, nil, KrNumberEditor(1, \amp).lag_(nil), nil, Env.adsr(releaseTime: 0.05), Env.one, `2000, `1, `0.5, `0.8, `0, `1.003, 1, 0, 0, SinOsc]);
+	d = p.asSynthDef;
+	d.add;
+	SynthDescLib.at(d.name.asSymbol).msgFuncKeepGate = true;
+};
+)
+
+
+(
 Proto({
 	~listenKey = \allPtsReceived;
 	~prep = {
@@ -199,31 +213,45 @@ PR(\viztrig).clone({
 	~model = BP(\ml);
 	~keep = 5;
 	~reqd = 2;
-	~last = Array.fill(~keep, 0);
 	~i = 0;
-	~wildThresh = 0.8;
-	// ~userprep?
+	~wildThresh = 0.65;
+	~magThresh = 0.6;
+	~wildDuration = 4;
+	~lastWildTime = 0;
+	
+	~userprep = {
+		~last = Array.fill(~keep, 0);
+	};
 
-	~wildFire = 0; // trigger main sequence event
+	~wildFire = {
+		 // trigger main sequence event
+		if(BP.exists(\segTrig)) {
+			BP(\segTrig).eventTrigAction;
+		};
+	};
 
 	~respond = {
 		var	ct = ~model.kmeans.centroids;
 		if(ct.size == 2) {
 			~last[~i] = (ct[1] - ct[0]).squared.sum.sqrt; // sqrt(dx**2 + dy**2)
-			~last[~i].debug("distance");
 
 			if(
-				~every.(~last, ~i - ~reqd + 1, ~i, _ > ~wildThresh)
-				and: { ~every.(~last, ~i - ~keep + 1, ~i - ~reqd, _ <= ~wildThresh) }
+				~model.normmag > ~magThresh and: {
+					~every.(~last, ~i - ~reqd + 1, ~i, _ > ~wildThresh)
+					and: { (thisThread.beats - ~lastWildTime) > ~wildDuration }
+				}
 			) {
+				~lastWildTime = thisThread.beats;
 				~wildFire.();
 			};
 
 			~i = (~i + 1) % ~keep;
 		} {
-			~last = Array.fill(~keep, 0);
+			~last.fill(~keep, 0);
 			~i = 0;
 		};
+
+		// x -> pan, sth -> filter
 	};
 
 	~every = { |array, i1, i2, func|
@@ -245,34 +273,59 @@ BP(\t2010).use {
 	~wildThresh = 0.8;
 };
 
+BP(\t2010).wildFire = {
+	(
+		instrument: d.name.asSymbol,
+		freq: (#[0, 2, 4] + rrand(28, 42)).degreeToKey(#[0, 2, 4, 5, 7, 9, 11], 12).midicps,
+		pan: 0,
+		gate: 0.15,
+		sustain: 0.07, 
+		vsens: 1,
+		ffreq: 3000,
+		parent: ProtoEvent(\polySynthPlayer).v,
+		immediateOSC: true
+	).play;
+};
+
+
+BP(\t2010).magThresh = 0.6;
+
+g = GenericGlobalControl(\magthr, nil, 0); g.gui;
+
+BP(\t2010).magThresh = g;  // heh heh... g will respond to math
+BP(\t2010).wildThresh = 0.65;
+
+BP(\t2010).wildDuration = 4;
+BP(\t2010).lastWildTime = 0;
+BP(\t2010).wasWild = false;
+
 BP(\t2010).respond = {
 	var	ct = ~model.kmeans.centroids;
 	if(ct.size == 2) {
 		~last[~i] = (ct[1] - ct[0]).squared.sum.sqrt; // sqrt(dx**2 + dy**2)
-		~last[~i].debug("distance");
+		// ~last.rotate(~i.neg - 1).round(0.001).debug("distance");
+
+		// BP(\ml).listVars;
+		// BP(\ml).normmag.debug("magnitude");
 
 		if(
-			~every.(~last, ~i - ~reqd + 1, ~i, _ > ~wildThresh)
-			and: { ~every.(~last, ~i - ~keep + 1, ~i - ~reqd, _ <= ~wildThresh) }
+			~model.normmag > ~magThresh and: {
+				~every.(~last, ~i - ~reqd + 1, ~i, _ > ~wildThresh) // .debug("latest bigger")
+				and: { (thisThread.beats - ~lastWildTime) > ~wildDuration }
+				// and: { ~every.(~last, ~i - ~keep + 1, ~i - ~reqd, _ <= ~wildThresh).debug("older smaller") }
+			}
 		) {
-			(
-				instrument: d.name.asSymbol,
-				freq: (#[0, 2, 4] + rrand(28, 42)).degreeToKey(#[0, 2, 4, 5, 7, 9, 11], 12).midicps,
-				pan: 0,
-				gate: 0.05,
-				sustain: 0.07, 
-				vsens: 1,
-				ffreq: 3000,
-				parent: ProtoEvent(\polySynthPlayer).v,
-				immediateOSC: true
-			).play;
+			~lastWildTime = thisThread.beats;
+			~wildFire.();
 		};
 
 		~i = (~i + 1) % ~keep;
 	} {
-		~last = Array.fill(~keep, 0);
+		~last.fill(~keep, 0);
 		~i = 0;
 	};
+
+	// x -> pan, sth -> filter
 };
 
 // efficiency: don't create arrays when not needed
