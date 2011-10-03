@@ -203,7 +203,7 @@ Proto({
 		~onoff = Button(~win, Rect(2, 245, 88, 20))
 		.states_([["stopped"], ["running", Color.black, Color(0.6, 1.0, 0.6)]])
 		.action_(e { |view|
-			~pdAddr.tryPerform(\sendMsg, \onOffSwitch, view.value)
+			~cameraPowerSwitch.(view.value);
 		});
 		~noiseReduction = EZSlider.new(~win, Rect(92, 245, 318 - 92, 20), "nr", #[0, 127, \lin, 1], action: e { |view|
 			~pdAddr.tryPerform(\sendMsg, \noiseReduction, view.value)
@@ -213,6 +213,10 @@ Proto({
 	};
 	~updateView = {
 		~model.updatePoints;
+	};
+	~cameraPowerSwitch = { |onoff = 0|
+		~pdAddr.tryPerform(\sendMsg, \onOffSwitch, onoff);
+		defer(e { ~onoff.value = (onoff > 0).binaryValue });
 	};
 }) => PR(\motionGui);
 
