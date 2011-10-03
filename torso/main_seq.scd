@@ -7,10 +7,26 @@
 // BP.loadGui;  // <-- this is for James's development work - no need in the performance
 
 
+// configure...
+~useVideo = true;
+~useVideo = false;
+
+
 // this block loads everything: cursor on open-paren, then ctrl-alt-x
 (
 var	mypath = thisProcess.nowExecutingPath, indices;
 if(BP.exists(\transports)) { BP(\transports).free };
+
+if(~useVideo ? true) {
+	~useVideo = true;  // just in case you forgot to set the var above
+	"ps x | grep 'pd-extended' | grep -v 'grep'".unixCmd(e { |result|
+		if(result > 0) {
+			// pd is not running; load the video patch
+			"xdg-open %".format((mypath.dirname +/+
+				"../vtest/frame-diff5.pd").escapeChar($ )).unixCmd;
+		};
+	}, postOutput: true);  // postOutput is required to avoid "broken pipe"
+};
 
 s = Server.local;
 s.waitForBoot {
@@ -159,6 +175,13 @@ s.waitForBoot {
 				{ \play } { d.reset }
 		});
 	};
+
+	(mypath.dirname.dirname +/+ "common/motion-detection.scd").loadPath;
+	(mypath.dirname.dirname +/+ "torso/tracking-defs.scd").loadPath;
+
+	BP(#[mg, ml]).free;
+	PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3));
+	PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
 };
 )
 
