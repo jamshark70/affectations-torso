@@ -9,6 +9,8 @@
 		initProcesses: {
 			if(VC.exists(\tton).not) { Func(\makettoneVC).value(\tton) };
 			\chuckIf.eval(Fact(\ttonesBP), BP, \tton, nil);
+
+			BP(\t2000trig).free;
 		},
 		unloadProcesses: {
 			VC(\tton).free; BP(\tton).free;
@@ -21,11 +23,23 @@
 						shouldSync: false,
 						id: \ttonCmd,
 						subIter: TLSequenceIterator([
-							bpCmd: (name: \tton, shouldSync: false, prepareBP: { |bp|
+							// bpCmd: (name: \tton, shouldSync: false, prepareBP: { |bp|
+							// 	bp.speedMul.value = 0.1;
+							// 	bp.fshift.value = 0;
+							// 	bp.distance.value = 17;
+							// }),
+							{
+								var bp = BP(\tton);
 								bp.speedMul.value = 0.1;
 								bp.fshift.value = 0;
 								bp.distance.value = 17;
-							}),
+								bp.prepareForPlay;
+
+								if(topEnvironment[\useVideo]) {
+									Fact(\t2000trig) => BP(\t2000trig);
+								};
+								0
+							},
 							gcAutoSynthCmd: (gc: { VC(\tton).v.globalControls[\ffreq] },
 								name: \ctlEnv, outName: \outbus,
 								env: Env(#[800, 7000, 1000], #[0.5, 0.5], \exp),
@@ -48,7 +62,10 @@
 					\sync,
 					{ "T2000-finished sync".debug; 0 }
 				],
-				// onStop: { BP(\tton).stop(0) },
+				// onStop: {
+				// 	// BP(\tton).stop(0);
+				// 	BP(\t2000trig).free;
+				// },
 				// dur: \trigger,  // or \sync
 				dur: \sync,
 				id: 2001  // trig id
@@ -64,6 +81,8 @@
 		segID: 2001,
 		initProcesses: {
 			\chuckIf.eval(Fact(\torsoSolo), BP, \ssd);
+
+			BP(\t2010trig).free;
 		},
 		unloadProcesses: { BP(\ssd).free },
 		seqPattern: {
@@ -92,7 +111,11 @@
 		seqPattern: {
 			Pn((
 				sequence: [
-					bpCmd: (name: \ssd, shouldSync: false),
+					bpCmd: (name: \ssd, shouldSync: false, prepareBP: {
+						if(topEnvironment[\useVideo]) {
+							Fact(\t2010trig) => BP(\t2010trig);
+						};
+					}),
 					// [	15, 
 						funcCmd: (
 							dur: 15,
@@ -101,6 +124,7 @@
 								if(cmd.notNil) { cmd.stop }
 								{ "could not find \\ttonCmd to stop it".warn };
 								BP(\tton).stop(0);
+								BP(\t2000trig).free;
 								// 0
 							}
 						),
@@ -131,6 +155,7 @@
 						cmd.stop;
 					};
 					BP(\tton).stop(0);  // just in case...
+					BP(\t2000trig).free;
 				},
 				dur: \trigger,  // or \sync
 				id: 2020,  // trig id
@@ -174,13 +199,19 @@
 
 			BP(\ssd2).delta = Pwhite(0.6, 1.8, inf);
 			BP(\ssd2).sustain = Pkey(\delta) * Pwhite(0.8, 1.8, inf);
+
+			BP(\t2020trig).free;
 		},
 		unloadProcesses: { BP(\ssd2).free },
 		seqPattern: {
 			Pn((
 				sequence: [
 					bpCmd: (name: \ssd, shouldSync: false, playWarning: false),
-					bpCmd: (name: \ssd2, shouldSync: false),
+					bpCmd: (name: \ssd2, shouldSync: false, prepareBP: {
+						if(topEnvironment[\useVideo]) {
+							Fact(\t2020trig) => BP(\t2020trig);
+						};
+					}),
 					loopCmd: (
 						cmds: [
 							funcCmd: topEnvironment[\trigParms],
@@ -202,7 +233,10 @@
 						]
 					)
 				],
-				// onStop: { BP(#[ssd, ssd2]).stop(0) },
+				onStop: {
+					// BP(#[ssd, ssd2]).stop(0)
+					BP(#[t2010trig, t2020trig]).free;
+				},
 				dur: \trigger,  // or \sync
 				id: 2030,  // trig id
 				init: Func(\nextThingTrig).v,

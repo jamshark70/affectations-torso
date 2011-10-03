@@ -176,12 +176,21 @@ s.waitForBoot {
 		});
 	};
 
-	(mypath.dirname.dirname +/+ "common/motion-detection.scd").loadPath;
-	(mypath.dirname.dirname +/+ "torso/tracking-defs.scd").loadPath;
-
 	BP(#[mg, ml]).free;
-	PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3));
-	PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
+	if(~useVideo) {
+		(mypath.dirname.dirname +/+ "common/motion-detection.scd").loadPath;
+		(mypath.dirname.dirname +/+ "torso/tracking-defs.scd").loadPath;
+
+		0.1.wait;
+		PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3));
+		0.1.wait;  // for some reason, immediate doesn't work...?
+		PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
+
+		~videoStarter.remove;
+		~videoStarter = SimpleController(~seq)
+		.put(\play, { BP(\mg).cameraPowerSwitch(1); })
+		.put(\stop, { BP(\mg).cameraPowerSwitch(0); });
+	};
 };
 )
 
