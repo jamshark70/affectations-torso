@@ -208,7 +208,7 @@ d = DDWTimer.new;
 
 
 // if you need to clear everything, do this:
-BP.all.do { |bp| if(#[mstClock, di, traj].includes(bp.collIndex).not) { bp.free } }; VC.all.free;
+BP.all.do { |bp| if(#[mstClock, di, traj, mg, ml].includes(bp.collIndex).not) { bp.free } }; VC.all.free;
 if(BP.exists(\mstClock)) { BP(\mstClock).free };
 if(BP.exists(\di)) { BP(\di).free };
 if(BP.exists(\traj)) { BP(\traj).free };
