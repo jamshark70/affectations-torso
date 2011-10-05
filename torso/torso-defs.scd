@@ -1189,7 +1189,7 @@ SynthDef(\nrgxch, { |outbus, bufnum, center = 60, width = 10, speed = 4, // ffre
 	chorCtr = 0.005, chorWidth = 0.003, chorSpeed = 0.02, chorDecay = 0.1,
 	amp = 1, moveTime = 1|
 	var	freq = LFDNoise1.kr(speed, width, center),
-	sig = COsc.ar(bufnum, freq, 1),
+	sig = Osc.ar(bufnum, freq + #[-0.5, 0.5], 0).sum,
 	fenv = NamedControl.kr(\fenv, (0!24).overWrite(Env(#[2000, 2000], #[1]).asArray)),
 	ffreq = EnvGen.kr(fenv, timeScale: moveTime),
 	rqenv = NamedControl.kr(\rqenv, (0!24).overWrite(Env(#[0.35, 0.35], #[1]).asArray)),
@@ -1209,7 +1209,7 @@ SynthDef(\nrgxch2, { |outbus, bufnum, /*center = 60,*/ width = 10, speed = 4, //
 	var	ctrenv = NamedControl.kr(\ctrenv, (0!24).overWrite(Env(100 ! 2, #[1]).asArray)),
 		center = EnvGen.kr(ctrenv, timeScale: moveTime),
 		freq = LFDNoise1.kr(speed, width, center),
-		sig = COsc.ar(bufnum, freq, 1),
+		sig = Osc.ar(bufnum, freq + #[-0.5, 0.5], 0).sum,
 		fenv = NamedControl.kr(\fenv, (0!24).overWrite(Env(#[2000, 2000], #[1]).asArray)),
 		ffreq = EnvGen.kr(fenv, timeScale: moveTime),
 		rqenv = NamedControl.kr(\rqenv, (0!24).overWrite(Env(#[0.35, 0.35], #[1]).asArray)),
@@ -1542,7 +1542,7 @@ make: { |name|
 				chorCtr = 0.005, chorWidth = 0.003, chorSpeed = 0.02, chorDecay = 0.1,
 				pan = 0, amp = 1, timeScale = 1, gate = 1|
 				var	freq = LFDNoise1.kr(speed, width, center),
-					sig = COsc.ar(bufnum, freq, 1),
+					sig = Osc.ar(bufnum, freq + #[-0.5, 0.5], 0).sum,
 					ampenv = Env.asr(1, 1, 1),
 					ampeg = EnvGen.kr(ampenv, gate, timeScale: timeScale, doneAction: 2);
 				sig = BPF.ar(sig, ffreq, rq);
