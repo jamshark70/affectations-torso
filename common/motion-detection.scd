@@ -171,6 +171,7 @@ Proto({
 		~model.predict;  // need to fill some variables in the model
 		~makeController.();
 		~makeViews.();
+		~pdHandshake.();
 		currentEnvironment
 	};
 	~freeCleanup = {
@@ -185,16 +186,18 @@ Proto({
 		});
 	};
 	~makeViews = {
+		var drawfunc = if(Window.implClass.findRespondingMethodFor(\drawFunc_).notNil)
+		{ \drawFunc_ } { \drawHook_ };
 		~win = Window(\test, Rect(500, 50, 320, 270));
 		// grid background, don't redraw on every userview refresh
-		~win.drawFunc = e {
+		~win.perform(drawfunc, e {
 			Pen.color = ~gridColor;
 			(~model.dim + 1).do { |i|
 				Pen.moveTo(Point(0, i * 48)).lineTo(Point(320, i * 48))
 				.moveTo(Point(i * 64, 0)).lineTo(Point(i * 64, 240));
 			};
 			Pen.stroke;
-		};
+		});
 		~uview = UserView(~win, Rect(0, 0, 320, 240));
 		~uview.drawFunc_(e {
 			~updateView.();
@@ -207,7 +210,7 @@ Proto({
 		});
 		~noiseReduction = EZSlider.new(~win, Rect(92, 245, 318 - 92, 20), "nr", #[0, 127, \lin, 1], action: e { |view|
 			~pdAddr.tryPerform(\sendMsg, \noiseReduction, view.value)
-		}, initVal: ~noiseReduction, initAction: true, labelWidth: 30);
+		}, initVal: ~noiseReduction, /*initAction: true,*/ labelWidth: 30);
 		~win.front.refresh;
 		~win.onClose = e { BP(~collIndex).free };
 	};
@@ -217,6 +220,21 @@ Proto({
 	~cameraPowerSwitch = { |onoff = 0|
 		~pdAddr.tryPerform(\sendMsg, \onOffSwitch, onoff);
 		defer(e { ~onoff.value = (onoff > 0).binaryValue });
+	};
+	~pdHandshake = {
+		~handshakeResp = OSCFunc(e {
+			~handshakeResp = nil;
+			~handshakeThread.stop;
+			~handshakeThread = nil;
+			~pdAddr.tryPerform(\sendMsg, \noiseReduction, ~noiseReduction.value);
+			"Communication with pd is established.".postln;
+		}, '/handshakeReply', nil).oneShot;
+		~handshakeThread = Task({
+			loop {
+				~pdAddr.tryPerform(\sendMsg, \handshake);
+				0.5.wait;
+			};
+		}).play;
 	};
 }) => PR(\motionGui);
 
