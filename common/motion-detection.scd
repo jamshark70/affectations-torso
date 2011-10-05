@@ -124,7 +124,12 @@ Proto({
 				BP(~collIndex).changed(\allPtsReceived);
 			};
 		}, '/coord');
+		CmdPeriod.add(currentEnvironment);
 	};
+	~removeResponder = { ~resp.free; CmdPeriod.remove(currentEnvironment) };
+	// OSCFuncs get killed on cmd-period
+	// I don't like it but this is the recommended solution
+	~cmdPeriod = { ~makeResponder.() };
 	~removeResponder = { ~resp.free };
 	// assumes a/ on AppClock b/ on a drawing func
 	~updatePoints = {
