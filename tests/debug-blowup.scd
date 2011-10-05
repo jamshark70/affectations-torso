@@ -10,6 +10,7 @@ u = Updater(z, { |obj|
 	if(z.peaks.any(_ > 1)) {
 		u.remove;
 		s.volume.mute;
+		topEnvironment[\seq].stop;
 		// OSCFunc({ |msg|
 		// 	topEnvironment[\scanTree].value(2, msg);
 		// }, '/g_queryTree.reply', s.addr).oneShot;
