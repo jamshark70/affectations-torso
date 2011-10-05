@@ -1,6 +1,6 @@
 // Affectations: Torso controller sequence
 
-(Document.current.path.dirname.dirname +/+ "/torso/torso-defs.scd")/*.debug*/.loadPath;
+(thisProcess.nowExecutingPath.dirname.dirname +/+ "/torso/torso-defs.scd")/*.debug*/.loadPath;
 
 [
 	PR(\tlsAff).copy.putAll((
