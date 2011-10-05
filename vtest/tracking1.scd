@@ -27,16 +27,14 @@ Proto({
 		currentEnvironment
 	};
 	~freeCleanup = {
-		~resp.debug("removing dependant").remove;
+		~resp.remove;
 		~userfree.();
 	};
 	~makeListener = {
-~model.dependants.debug(">> makeListener");
-		~resp = SimpleController(~model.debug("making dependant for"))
+		~resp = SimpleController(~model)
 		.put(~listenKey, e { |obj, what ... moreArgs|
 			~respond.valueArray(obj, what, moreArgs)
 		});
-~model.dependants.debug("<< makeListener");
 	};
 }) => PR(\viztrig);
 )
@@ -303,11 +301,9 @@ PR(\viztrig).clone({
 }) => PR(\t2010trig);
 )
 
-// this is very seriously fucked up
-// PR(\t2010trig).model === BP(\ml) but
-// PR(\t2010trig).model.dependants !== BP(\ml).dependants during init
-// but it all works if I pass in the model at chuck time
-// IOW, "identical" means "not-identical"... my head hurts
+// note, not OK to use BP(\ml) in the PR
+// because the PR copies all its child elements, so then BP(\ml) inside !== BP(\ml) outside
+// you must pass the model at chuck time
 BP(\t2010).free; PR(\t2010trig).chuck(BP(\t2010), nil, (model: BP(\ml)));
 
 BP(\t2020).free; PR(\t2010trig).chuck(BP(\t2020), nil, (model: BP(\ml), soloproc: \ssd2, panMulAdd: #[-1, 0]));
