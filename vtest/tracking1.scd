@@ -405,3 +405,42 @@ BP(\t2010).every = { |array, i1, i2, func|
 
 
 BP(\t2010).listVars
+
+
+
+// t2030
+// event on left-right change of direction
+// close, but hyper-responsive: fires in one direction, then immediately the other
+(
+BP(\t2030trig).free;
+
+PR(\viztrig).clone({
+	~model = BP(\ml);
+	~theta = 0.5pi;
+	~leftRange = [0.8pi, 1.3pi];
+	~respond = {
+		var new_theta = ~model.anglePoint.theta;
+		~isLeft = new_theta.exclusivelyBetween(*(~leftRange));
+		if(~theta.exclusivelyBetween(*(~leftRange)) xor: ~isLeft) {
+			"switched to %\n".postf(
+				if(~isLeft) { "left" } { "right" }
+			);
+			(
+				instrument: d.name,
+				freq: exprand(300, 800),
+				gate: 0.1,
+				sustain: 0.25,
+				vsens: 1.0,
+				pan: ~isLeft.not.binaryValue * 2 - 1,
+				immediateOSC: true,
+				parent: ProtoEvent(\polySynthPlayer).v.parent
+			).play
+		};
+		~theta = new_theta;
+	};
+}) => BP(\t2030trig);
+)
+
+BP(\t2030trig).listVars
+
+BP(\t2030trig).model === BP(\ml)
