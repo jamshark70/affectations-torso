@@ -124,7 +124,7 @@ left inlet or no output;
 #X obj 127 203 #reverse 1;
 #X obj 141 351 t b l;
 #X text 534 192 reset [counter] on 'go';
-#N canvas 0 0 566 432 recv_osc_toggle 1;
+#N canvas 0 0 566 432 recv_osc_toggle 0;
 #X obj 68 33 udpreceive 57122;
 #X obj 68 69 unpackOSC;
 #X obj 68 106 pipelist;
