@@ -105,8 +105,21 @@ Proto({
 			};
 		};
 		~makeResponder.();
-		~anglebuf = Array.fill(~anglebufSize, { 0@0 });
+		// ~anglebuf = Array.fill(~anglebufSize, { 0@0 });
+		// ~anglebufIndex = 0;
+
+		// // these are fixed values used for the regression
+		// // calculate once, instead of every time
+		// ~indices = (0 .. ~anglebufSize-1);
+		// ~i_avg = ~indices.mean;
+		// ~i_minus = ~indices - ~i_avg;
+		// ~i_minus_sqr_sum = ~i_minus.squared.sum;
+
+		~prevCentroid = Point(0, 0);
+		~anglebuf = Array.fill(~anglebufSize, 0);
+		~anglebufSort = Array.new;
 		~anglebufIndex = 0;
+
 		currentEnvironment
 	};
 	~freeCleanup = {
@@ -131,6 +144,77 @@ Proto({
 	~updatePoints = {
 		~points.do { |pt| pt.plot };
 	};
+
+	// rework: anglebuf is now the last few centroids
+	// then calculate the slope from linear regression and get the angle from this
+	~predict = {
+		var /*sum = Point(0, 0),*/ temppt, centroidx = 0, centroidy = 0, magsum = 0,
+			theta, insertIndex;
+		~kmeans = KMeans(~kmSize);
+		~points.do { |p|
+			temppt = [p.xabs.linlin(0, 319, -1, 1), p.yabs.linlin(0, 239, -1, 1)];
+			centroidx = centroidx + (temppt[0] * p.mag.last);
+			centroidy = centroidy + (temppt[1] * p.mag.last);
+			magsum = magsum + p.mag.last;
+			// if(p.predicted) {
+			// 	sum = sum + (Point(p.new_x - p.x.last, p.new_y - p.y.last) * p.mag.last);
+			// };
+			// 0.75 = y-extent / x-extent
+			// preserve the same aspect ratio in kmeans
+			if(p.mag.last >= ~magThresh) { ~kmeans.add(temppt * #[1, 0.75]) };
+		};
+		~centroid = Point(
+			(centroidx / max(magsum, 1)), // .linlin(-1, 1, 0, 319),
+			(centroidy / max(magsum, 1)) // .linlin(-1, 1, 0, 239)
+		);
+		~kmeans.update;
+		~magsum = magsum;
+		~normmag = magsum / ~maxmag;
+		// ~anglebuf[~anglebufIndex] = ~centroid;
+		// ~anglebufIndex = (~anglebufIndex + 1) % ~anglebufSize;
+		// ~regress.(~anglebuf);
+
+		// median filter on angles
+		theta = (~centroid - ~prevCentroid).theta;
+[~centroid - ~prevCentroid, theta].debug("\ncentroid diff, theta");
+		// don't do this for large array sizes!
+		~anglebufSort.remove(~anglebuf[~anglebufIndex]);
+		~anglebuf[~anglebufIndex] = theta;
+		insertIndex = ~anglebufSort.detectIndex { |item| item > theta };
+		if(insertIndex.isNil) {
+			~anglebufSort = ~anglebufSort.add(theta);
+		} {
+			~anglebufSort = ~anglebufSort.insert(insertIndex, theta);
+		};
+~anglebufSort.round(0.01).debug("sorted");
+~anglebufSort.sortedMedian.debug("median");
+		~anglebufIndex = (~anglebufIndex + 1) % ~anglebufSize;
+		~anglePoint = Polar(~magsum, ~anglebufSort.sortedMedian).asPoint;
+~anglePoint.theta.debug("~anglePoint.theta");
+
+		~prevCentroid = ~centroid;
+
+		currentEnvironment
+	};
+
+	// ~regress = { |pts|
+	// 	var x = pts.collect(_.x),
+	// 		y = pts.collect(_.y),
+	// 		y_avg = y.mean,
+	// 		x_avg = x.mean,
+	// 		x_slope = (~i_minus * (x - x_avg)).sum / ~i_minus_sqr_sum,
+	// 		y_slope = (~i_minus * (y - y_avg)).sum / ~i_minus_sqr_sum,
+	// 		x_intercept = x_avg - (x_slope * ~i_avg),
+	// 		y_intercept = y_avg - (y_slope * ~i_avg);
+	// 	~new_x = x_intercept + (x_slope * ~anglebufSize);  // ~num = high 'i' + 1
+	// 	~new_y = y_intercept + (y_slope * ~anglebufSize);
+	// 	~anglePoint = Point(x.last - ~new_x, y.last - ~new_y);
+	// 	// ~angle = ~anglePoint.theta;
+	// 	// ~radius = ~anglePoint.rho; //sqrt((x.last - ~new_x).squared + (y.last - ~new_y).squared);
+	// 	currentEnvironment
+	// };
+
+	/*
 	~predict = {
 		var sum = Point(0, 0), temppt, centroidx = 0, centroidy = 0, magsum = 0;
 		~kmeans = KMeans(~kmSize);
@@ -160,6 +244,7 @@ Proto({
 		~anglePoint = sum;
 		currentEnvironment
 	};
+	*/
 }) => PR(\motionListener);
 
 // let's do this right... don't fold gui into data-handling class
@@ -380,8 +465,22 @@ Proto({
 
 BP(\mg).free;
 BP(#[mg, ml]).free;
-PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3));
+PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3, anglebufSize: 15));
 PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
+
+BP(\ml).anglebufSort
+
+u.remove;
+u = SimpleController(BP(\ml)).put(\allPtsReceived, { BP(\ml).anglePoint.theta.debug("theta") });
+
+l = List.new;
+u.put(\allPtsReceived, {
+	l.add(BP(\ml).anglePoint.theta);
+	if(l.size == 200) {
+		u.put(\allPtsReceived, nil);
+		defer { l.asArray.plot2(minval: -pi, maxval: pi) };
+	};
+});
 
 BP(\ml).kmeans.centroids.do(_.postln); ""
 
