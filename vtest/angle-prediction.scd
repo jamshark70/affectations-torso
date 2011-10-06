@@ -105,21 +105,18 @@ Proto({
 			};
 		};
 		~makeResponder.();
-		// ~anglebuf = Array.fill(~anglebufSize, { 0@0 });
-		// ~anglebufIndex = 0;
 
-		// // these are fixed values used for the regression
-		// // calculate once, instead of every time
-		// ~indices = (0 .. ~anglebufSize-1);
-		// ~i_avg = ~indices.mean;
-		// ~i_minus = ~indices - ~i_avg;
-		// ~i_minus_sqr_sum = ~i_minus.squared.sum;
-
-		~prevCentroid = Point(0, 0);
-		~prevTheta = 0;
-		~anglebuf = Array.fill(~anglebufSize, 0);
-		~anglebufSort = Array.new;
-		~anglebufIndex = 0;
+		~xbuf = Array.fill(~anglebufSize, 0);
+		~ybuf = Array.fill(~anglebufSize, 0);
+		// ~xbufSort = Array.new;
+		// ~ybufSort = Array.new;
+		~bufIndex = 0;
+		// ~prevXMedian = 0;
+		// ~prevYMedian = 0;
+		~xsum = 0;
+		~ysum = 0;
+		~prevXSum = 0;
+		~prevYSum = 0;
 
 		currentEnvironment
 	};
@@ -164,38 +161,23 @@ Proto({
 			// preserve the same aspect ratio in kmeans
 			if(p.mag.last >= ~magThresh) { ~kmeans.add(temppt * #[1, 0.75]) };
 		};
-		~centroid = Point(
+		~rawCentroid = Point(
 			(centroidx / max(magsum, 1)), // .linlin(-1, 1, 0, 319),
 			(centroidy / max(magsum, 1)) // .linlin(-1, 1, 0, 239)
 		);
 		~kmeans.update;
 		~magsum = magsum;
 		~normmag = magsum / ~maxmag;
-		// ~anglebuf[~anglebufIndex] = ~centroid;
-		// ~anglebufIndex = (~anglebufIndex + 1) % ~anglebufSize;
-		// ~regress.(~anglebuf);
 
-		// median filter on angles
-		theta = (~centroid - ~prevCentroid).theta;
-		theta = (theta - ~prevTheta).wrap(-pi, pi) + ~prevTheta;
-[~centroid - ~prevCentroid, theta].debug("\ncentroid diff, theta");
-		// don't do this for large array sizes!
-		~anglebufSort.remove(~anglebuf[~anglebufIndex]);
-		~anglebuf[~anglebufIndex] = theta;
-		insertIndex = ~anglebufSort.detectIndex { |item| item > theta };
-		if(insertIndex.isNil) {
-			~anglebufSort = ~anglebufSort.add(theta);
-		} {
-			~anglebufSort = ~anglebufSort.insert(insertIndex, theta);
-		};
-~anglebufSort.round(0.01).debug("sorted");
-~anglebufSort.sortedMedian.debug("median");
-		~anglebufIndex = (~anglebufIndex + 1) % ~anglebufSize;
-		~anglePoint = Polar(~magsum, ~anglebufSort.sortedMedian).asPoint;
-~anglePoint.theta.debug("~anglePoint.theta");
-
-		~prevTheta = theta;
-		~prevCentroid = ~centroid;
+		~prevXSum = ~xsum;
+		~prevYSum = ~ysum;
+		~xsum = ~xsum - ~xbuf[~bufIndex] + ~rawCentroid.x;
+		~ysum = ~ysum - ~ybuf[~bufIndex] + ~rawCentroid.y;
+		~xbuf[~bufIndex] = ~rawCentroid.x;
+		~ybuf[~bufIndex] = ~rawCentroid.y;
+		~bufIndex = (~bufIndex + 1) % ~anglebufSize;
+		~anglePoint = Point(~xsum - ~prevXSum, ~ysum - ~prevYSum);
+		~centroid = Point(~xsum / ~anglebufSize, ~ysum / ~anglebufSize);
 
 		currentEnvironment
 	};

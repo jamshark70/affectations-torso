@@ -68,3 +68,26 @@ PR(\motionListener).clone({
 	};
 }) => PR(\proxListener);
 
+
+
+		// median filter on angles
+		theta = (~centroid - ~prevCentroid).theta;
+		theta = (theta - ~prevTheta).wrap(-pi, pi) + ~prevTheta;
+[~centroid - ~prevCentroid, theta].debug("\ncentroid diff, theta");
+		// don't do this for large array sizes!
+		~anglebufSort.remove(~anglebuf[~anglebufIndex]);
+		~anglebuf[~anglebufIndex] = theta;
+		insertIndex = ~anglebufSort.detectIndex { |item| item > theta };
+		if(insertIndex.isNil) {
+			~anglebufSort = ~anglebufSort.add(theta);
+		} {
+			~anglebufSort = ~anglebufSort.insert(insertIndex, theta);
+		};
+~anglebufSort.round(0.01).debug("sorted");
+~anglebufSort.sortedMedian.debug("median");
+		~anglebufIndex = (~anglebufIndex + 1) % ~anglebufSize;
+		~anglePoint = Polar(~magsum, ~anglebufSort.sortedMedian).asPoint;
+~anglePoint.theta.debug("~anglePoint.theta");
+
+		~prevTheta = theta;
+		~prevCentroid = ~centroid;

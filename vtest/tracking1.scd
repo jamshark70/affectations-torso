@@ -458,3 +458,51 @@ g = GenericGlobalControl(\normmag, nil, 0); g.gui;
 BP(\t2030trig).magThresh = g;
 
 BP(\t2030trig).leftRange = [0.6pi, 1.4pi];
+
+BP(\t2030trig).leftRange / pi
+
+
+BP(\t2030trig).keep = 6;
+BP(\t2030trig).lastSigns = Array.fill(BP(\t2030trig).keep, 0);
+BP(\t2030trig).signIndex = 0;
+BP(\t2030trig).signSum = 0;
+
+// this might be usable
+
+BP(\t2030trig).decay = 0;
+BP(\t2030trig).decayThresh = 0.5;
+BP(\t2030trig).decayFactor = 0.905724;
+
+BP(\t2030trig).respond = {
+	var new_theta = ~model.anglePoint.theta,
+		new_sign = ~signForAngle.(new_theta);
+	// ~prevSum = ~signSum;
+	// ~signSum = ~signSum - ~lastSigns[~signIndex] + new_sign;
+	// ~lastSigns[~signIndex] = new_sign;
+	// ~signIndex = (~signIndex + 1) % ~keep;
+	if(
+		~model.normmag > ~magThresh
+		and: { new_sign != 0 and: { new_sign != ~sign } }
+	) {
+		~decay = 1;
+	} {
+		~decay = ~decay * ~decayFactor;
+	};
+	if(~decay > ~decayThresh) {
+		~decay = 0;
+		"switched to %\n".postf(
+			if(new_sign < 0) { "left" } { "right" }
+		);
+		(
+			instrument: d.name,
+			freq: exprand(300, 800),
+			gate: 0.1,
+			sustain: 0.25,
+			vsens: 1.0,
+			pan: new_sign * 0.8, // ~isLeft.not.binaryValue * 2 - 1,
+			immediateOSC: true,
+			parent: ProtoEvent(\polySynthPlayer).v.parent
+		).play;
+	};
+	~sign = new_sign;
+};
