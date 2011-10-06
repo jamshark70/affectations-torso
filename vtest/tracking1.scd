@@ -416,14 +416,26 @@ BP(\t2030trig).free;
 
 PR(\viztrig).clone({
 	~model = BP(\ml);
-	~theta = 0.5pi;
-	~leftRange = [0.8pi, 1.3pi];
+	~leftRange = [0.7pi, 1.3pi];
+	~magThresh = 0.5;
+	~isLeft = { |theta| theta.exclusivelyBetween(*(~leftRange)) };
+	// ((pi - theta) % 2pi) flips the angle around the vertical axis
+	~isRight = { |theta| ((pi - theta) % 2pi).exclusivelyBetween(*(~leftRange)) };
+	~signForAngle = { |theta|
+		case
+			{ ~isLeft.(theta) } { -1 }
+			{ ~isRight.(theta) } { 1 }
+			{ 0 }
+	};
 	~respond = {
-		var new_theta = ~model.anglePoint.theta;
-		~isLeft = new_theta.exclusivelyBetween(*(~leftRange));
-		if(~theta.exclusivelyBetween(*(~leftRange)) xor: ~isLeft) {
+		var new_theta = ~model.anglePoint.theta,
+			new_sign = ~signForAngle.(new_theta);
+		if(
+			~model.normmag > ~magThresh
+			and: { new_sign != 0 and: { new_sign != ~sign } }
+		) {
 			"switched to %\n".postf(
-				if(~isLeft) { "left" } { "right" }
+				if(new_sign < 0) { "left" } { "right" }
 			);
 			(
 				instrument: d.name,
@@ -431,16 +443,18 @@ PR(\viztrig).clone({
 				gate: 0.1,
 				sustain: 0.25,
 				vsens: 1.0,
-				pan: ~isLeft.not.binaryValue * 2 - 1,
+				pan: new_sign * 0.8, // ~isLeft.not.binaryValue * 2 - 1,
 				immediateOSC: true,
 				parent: ProtoEvent(\polySynthPlayer).v.parent
-			).play
+			).play;
+			~sign = new_sign;
 		};
-		~theta = new_theta;
 	};
 }) => BP(\t2030trig);
 )
 
-BP(\t2030trig).listVars
+g = GenericGlobalControl(\normmag, nil, 0); g.gui;
 
-BP(\t2030trig).model === BP(\ml)
+BP(\t2030trig).magThresh = g;
+
+BP(\t2030trig).leftRange = [0.6pi, 1.4pi];
