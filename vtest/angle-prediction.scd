@@ -116,6 +116,7 @@ Proto({
 		// ~i_minus_sqr_sum = ~i_minus.squared.sum;
 
 		~prevCentroid = Point(0, 0);
+		~prevTheta = 0;
 		~anglebuf = Array.fill(~anglebufSize, 0);
 		~anglebufSort = Array.new;
 		~anglebufIndex = 0;
@@ -176,6 +177,7 @@ Proto({
 
 		// median filter on angles
 		theta = (~centroid - ~prevCentroid).theta;
+		theta = (theta - ~prevTheta).wrap(-pi, pi) + ~prevTheta;
 [~centroid - ~prevCentroid, theta].debug("\ncentroid diff, theta");
 		// don't do this for large array sizes!
 		~anglebufSort.remove(~anglebuf[~anglebufIndex]);
@@ -192,6 +194,7 @@ Proto({
 		~anglePoint = Polar(~magsum, ~anglebufSort.sortedMedian).asPoint;
 ~anglePoint.theta.debug("~anglePoint.theta");
 
+		~prevTheta = theta;
 		~prevCentroid = ~centroid;
 
 		currentEnvironment
@@ -261,7 +264,7 @@ Proto({
 	};
 	~freeCleanup = {
 		~controller.remove;
-		~win.close;
+		~win.tryPerform(\close);
 	};
 	~makeController = {
 		var updateFunc = inEnvir { ~uview.refresh };
@@ -465,7 +468,7 @@ Proto({
 
 BP(\mg).free;
 BP(#[mg, ml]).free;
-PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3, anglebufSize: 15));
+PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3, anglebufSize: 5));
 PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
 
 BP(\ml).anglebufSort
@@ -481,6 +484,8 @@ u.put(\allPtsReceived, {
 		defer { l.asArray.plot2(minval: -pi, maxval: pi) };
 	};
 });
+
+-21.053447383069.wrap(-pi, pi) / pi * 180
 
 BP(\ml).kmeans.centroids.do(_.postln); ""
 
