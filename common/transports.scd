@@ -492,6 +492,7 @@ Proto({
 			.string_("Visual system IP/port")
 			.align_(\center);
 
+		/*
 		savedAddr = (Platform.userAppSupportDir +/+ "vizaddr.txt").loadPath(warnIfNotFound: false);
 		savedAddr !? {
 			Library.put(\vizAddr, savedAddr)
@@ -545,6 +546,7 @@ Proto({
 					"Enter a valid address before clicking".warn;
 				};
 			});
+		*/
 
 		UserView(parent, ~bigButtonSize@16)
 			.drawFunc_(e {
