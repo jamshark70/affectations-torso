@@ -108,8 +108,15 @@ Proto({
 			};
 		};
 		~makeResponder.();
-		~anglebuf = Array.fill(~anglebufSize, { 0@0 });
-		~anglebufIndex = 0;
+
+		~xbuf = Array.fill(~anglebufSize, 0);
+		~ybuf = Array.fill(~anglebufSize, 0);
+		~bufIndex = 0;
+		~xsum = 0;
+		~ysum = 0;
+		~prevXSum = 0;
+		~prevYSum = 0;
+
 		currentEnvironment
 	};
 	~freeCleanup = {
@@ -130,40 +137,50 @@ Proto({
 	// OSCFuncs get killed on cmd-period
 	// I don't like it but this is the recommended solution
 	~cmdPeriod = { ~makeResponder.() };
-	~removeResponder = { ~resp.free };
 	// assumes a/ on AppClock b/ on a drawing func
 	~updatePoints = {
 		~points.do { |pt| pt.plot };
 	};
+
+	// rework: anglebuf is now the last few centroids
+	// then calculate the slope from linear regression and get the angle from this
 	~predict = {
-		var sum = Point(0, 0), temppt, centroidx = 0, centroidy = 0, magsum = 0;
+		var /*sum = Point(0, 0),*/ temppt, centroidx = 0, centroidy = 0, magsum = 0,
+			theta, insertIndex;
 		~kmeans = KMeans(~kmSize);
 		~points.do { |p|
 			temppt = [p.xabs.linlin(0, 319, -1, 1), p.yabs.linlin(0, 239, -1, 1)];
 			centroidx = centroidx + (temppt[0] * p.mag.last);
 			centroidy = centroidy + (temppt[1] * p.mag.last);
 			magsum = magsum + p.mag.last;
-			if(p.predicted) {
-				sum = sum + (Point(p.new_x - p.x.last, p.new_y - p.y.last) * p.mag.last);
-			};
+			// if(p.predicted) {
+			// 	sum = sum + (Point(p.new_x - p.x.last, p.new_y - p.y.last) * p.mag.last);
+			// };
 			// 0.75 = y-extent / x-extent
 			// preserve the same aspect ratio in kmeans
 			if(p.mag.last >= ~magThresh) { ~kmeans.add(temppt * #[1, 0.75]) };
 		};
-		~centroid = Point(
+		~rawCentroid = Point(
 			(centroidx / max(magsum, 1)), // .linlin(-1, 1, 0, 319),
 			(centroidy / max(magsum, 1)) // .linlin(-1, 1, 0, 239)
 		);
 		~kmeans.update;
 		~magsum = magsum;
 		~normmag = magsum / ~maxmag;
-		~anglebuf.wrapPut(~anglebufIndex, sum);
-		~anglebufIndex = ~anglebufIndex + 1;
-		sum = Point(0, 0);
-		~anglebuf.do { |pt| sum = sum + pt };
-		~anglePoint = sum;
+
+		~prevXSum = ~xsum;
+		~prevYSum = ~ysum;
+		~xsum = ~xsum - ~xbuf[~bufIndex] + ~rawCentroid.x;
+		~ysum = ~ysum - ~ybuf[~bufIndex] + ~rawCentroid.y;
+		~xbuf[~bufIndex] = ~rawCentroid.x;
+		~ybuf[~bufIndex] = ~rawCentroid.y;
+		~bufIndex = (~bufIndex + 1) % ~anglebufSize;
+		~anglePoint = Point(~xsum - ~prevXSum, ~ysum - ~prevYSum);
+		~centroid = Point(~xsum / ~anglebufSize, ~ysum / ~anglebufSize);
+
 		currentEnvironment
 	};
+
 }) => PR(\motionListener);
 
 // let's do this right... don't fold gui into data-handling class
@@ -181,7 +198,7 @@ Proto({
 	};
 	~freeCleanup = {
 		~controller.remove;
-		~win.close;
+		~win.tryPerform(\close);
 	};
 	~makeController = {
 		var updateFunc = inEnvir { ~uview.refresh };
