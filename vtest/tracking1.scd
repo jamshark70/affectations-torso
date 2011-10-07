@@ -417,15 +417,18 @@ BP(\t2030trig).free;
 PR(\viztrig).clone({
 	~model = BP(\ml);
 	~leftRange = [0.7pi, 1.3pi];
-	~magThresh = 0.5;
+	~magThresh = 0.14;
+	~decay = 0;
+	~decayThresh = 0.5;
+	~decayFactor = 0.905724;
 	~isLeft = { |theta| theta.exclusivelyBetween(*(~leftRange)) };
 	// ((pi - theta) % 2pi) flips the angle around the vertical axis
 	~isRight = { |theta| ((pi - theta) % 2pi).exclusivelyBetween(*(~leftRange)) };
 	~signForAngle = { |theta|
 		case
-			{ ~isLeft.(theta) } { -1 }
-			{ ~isRight.(theta) } { 1 }
-			{ 0 }
+		{ ~isLeft.(theta) } { -1 }
+		{ ~isRight.(theta) } { 1 }
+		{ 0 }
 	};
 	~respond = {
 		var new_theta = ~model.anglePoint.theta,
@@ -434,6 +437,12 @@ PR(\viztrig).clone({
 			~model.normmag > ~magThresh
 			and: { new_sign != 0 and: { new_sign != ~sign } }
 		) {
+			~decay = 1;
+		} {
+			~decay = ~decay * ~decayFactor;
+		};
+		if(~decay > ~decayThresh) {
+			~decay = 0;
 			"switched to %\n".postf(
 				if(new_sign < 0) { "left" } { "right" }
 			);
