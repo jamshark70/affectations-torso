@@ -187,3 +187,48 @@ make: { |name|
 
 
 // t2030, to come
+(
+make: { |name|
+	BP(name).free;
+	PR(\viztrig).clone({
+		~model = BP(\ml);
+		~leftRange = [0.7pi, 1.3pi];
+		~magThresh = 0.14;
+		~decay = 0;
+		~decayThresh = 0.5;
+		~decayFactor = 0.905724;
+		~isLeft = { |theta| theta.exclusivelyBetween(*(~leftRange)) };
+		// ((pi - theta) % 2pi) flips the angle around the vertical axis
+		~isRight = { |theta| ((pi - theta) % 2pi).exclusivelyBetween(*(~leftRange)) };
+		~signForAngle = { |theta|
+			case
+			{ ~isLeft.(theta) } { -1 }
+			{ ~isRight.(theta) } { 1 }
+			{ 0 }
+		};
+		~respond = {
+			var new_theta = ~model.anglePoint.theta,
+				new_sign = ~signForAngle.(new_theta);
+			if(
+				~model.normmag > ~magThresh
+				and: { new_sign != 0 and: { new_sign != ~sign } }
+			) {
+				~decay = 1;
+			} {
+				~decay = ~decay * ~decayFactor;
+			};
+			if(~decay > ~decayThresh) {
+				~decay = 0;
+				~sign = new_sign;
+				~doAction.();
+			};
+		};
+		~doAction = {
+			// "switched to %\n".postf(
+			// 	if(~sign < 0) { "left" } { "right" }
+			// );
+			BP(\thr).sign = ~sign;
+			BP(\thr).triggerOneEvent(0);
+		};
+	}) => BP(name);
+}, type: \bp) => Fact(\t2030trig);

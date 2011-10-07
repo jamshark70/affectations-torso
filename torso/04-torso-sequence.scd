@@ -264,7 +264,7 @@
 		seqPattern: {
 			Pn((
 				sequence: [
-					bpCmd: (name: \thr, shouldSync: false, prepareBP: { |bp|
+					{	var bp = BP(\thr);
 						bp.delta = Pswitch1([
 							Pwhite(1.5, 3.0, inf),
 							Pexprand(0.2, 0.9, inf)
@@ -274,14 +274,17 @@
 						bp.throwfHi = Pwhite(1000, 3000, inf);
 						bp.throwampenv = `[Env(#[0, 0.1, 1, 0.1, 0] * 0.5, #[0.3, 0.1, 0.1, 0.5], \sin)];
 						bp.amp = 1;
-					}),
+						bp.prepareForPlay;
+						Fact(\t2030trig) => BP(\t2030trig);
+						0
+					},
 					bpCmd: (name: \td, shouldSync: false, prepareBP: { |bp|
 						bp.speedMul = Pwhite(0.7, 2.0, inf);
 						bp.fshift = Pexprand(4.0, 36.0, inf);
 					}),
 					[10, { BP(#[ssd, ssd2]).stop(0); 0 }]
 				],
-				// onStop: {},
+				onStop: { BP(\t2030trig).free },
 				dur: \trigger,  // or \sync
 				id: 2040,  // trig id
 				init: Func(\nextThingTrig).v,

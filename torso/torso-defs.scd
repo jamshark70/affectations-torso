@@ -1439,6 +1439,7 @@ make: { |name|
 		fxrq: 0.2,
 		fxspeedMul: 0.71,
 		fxfshift: 34.8,
+		sign: Prand(#[-1, 1], inf),
 		delta: Pswitch1([
 			Pwhite(1.5, 3.0, inf),
 			Pexprand(0.2, 0.9, inf)
@@ -1475,7 +1476,7 @@ make: { |name|
 						\instrument, \innermod1Mv,
 						\distance1, Pwhite(15.0, 20.0, inf),
 						\distance2, Pkey(\distance1) / Pwhite(2.0, 3.0, inf),
-						\pan, Pwhite(0.5, 1.0, inf) * Prand(#[-1, 1], inf),
+						\pan, Pwhite(0.5, 1.0, inf) * BPStream(\sign).neg,
 						\pan2, Pwhite(0.5, 1.0, inf) * Pkey(\pan).sign.neg,
 						\distFar, 20,
 						// \glrvbout, ~glrvbmc.inbus.index,
