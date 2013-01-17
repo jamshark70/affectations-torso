@@ -4,6 +4,7 @@
 *** Need: threshold? Or trigger envelope by y-velocity?
 ** T2001-dummy wait for solo
 ** T2010-stephen solo
+*** Count # of points with mag > a threshold
 *** Wild sweeps: move whole body
 *** Not sure yet how to do subtler modulation
 **** Maybe hands only, on the sides of the window?
