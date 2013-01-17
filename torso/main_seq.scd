@@ -22,7 +22,7 @@ if(~useVideo ? true) {
 	"ps x | grep 'pd-extended' | grep -v 'grep'".unixCmd(e { |result|
 		if(result > 0) {
 			// pd is not running; load the video patch
-			"xdg-open %".format((mypath.dirname +/+
+			"pd-extended %".format((mypath.dirname +/+
 				"../vtest/frame-diff5.pd").escapeChar($ )).unixCmd;
 		};
 	}, postOutput: true);  // postOutput is required to avoid "broken pipe"
@@ -224,7 +224,7 @@ if(BP.exists(\traj)) { BP(\traj).free };
 
 o.do(_.remove);
 o = #['/note', '/perc'].collect { |key|
-	OSCresponderNode(nil, key, 
+	OSCresponderNode(nil, key,
 		if(~oscRecvFile.tryPerform(\isOpen) ? false) { e { |t, r, m| ~oscRecvFile << ([t] ++ m) << Char.nl } }
 		{ e { |t, r, m| Post <<* ([t] ++ m) << Char.nl } }
 	).add;
@@ -418,7 +418,7 @@ e = (play: { if(~proc != \rest) { BP(~proc).bus.set(99999) } });
 p = Pseq([
 	(proc: \rest, delta: 1),
 	Pfindur(22, Pbind(
-		\proc, \evTrig, 
+		\proc, \evTrig,
 		\delta, Pwhite(0.8, 1.2, inf) * Env(#[1, 1, 4], #[4, 18])
 	)),
 	Pbind(
