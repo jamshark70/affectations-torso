@@ -89,6 +89,7 @@ Proto({
 }, parentKeys: #[num, color, magspec, maxmag]) => PR(\regressionUnit);
 
 Proto({
+	~viewSize = Point(320, 240);
 	~dim = 5;
 	~ptNum = 5;
 	~anglebufSize = 3;
@@ -103,7 +104,7 @@ Proto({
 					PR(\regressionUnit).copy
 					.put(\num, ~ptNum)
 					.put(\magThresh, ~magThresh)
-					.prep(xi * 64, yi * 48)
+					.prep(xi * ~viewSize.x / ~dim, yi * ~viewSize.y / ~dim)
 				);
 			};
 		};
@@ -125,10 +126,17 @@ Proto({
 	~makeResponder = {
 		if(~resp.notNil) { ~removeResponder.() };
 		~resp = OSCFunc(e { |msg|
-			~points[msg[4] - 1].addPoint(*msg[1..3]).predict;
-			if(msg[4] == ~dim.squared) {
+			if(msg[4] == (dim.squared + 1)) {
+				// if(~invertY) {
+				// 	~blobxy = Point(msg[1], 1.0 - msg[2]);
+				// } {
+				~blobxy = Point(msg[1], msg[2]);
+				// };
+				~magsum = msg[3];
 				~predict.();
 				BP(~collIndex).changed(\allPtsReceived);
+			} {
+				~points[msg[4] - 1].addPoint(*msg[1..3]).predict;
 			};
 		}, '/coord');
 		CmdPeriod.add(currentEnvironment);
@@ -185,11 +193,14 @@ Proto({
 
 // let's do this right... don't fold gui into data-handling class
 Proto({
+	// ~viewSize = Point(320, 240);
 	~gridColor = Color.gray(0.6);
 	~pdAddr = NetAddr("127.0.0.1", 57122);
 	~noiseReduction = 64;
 	~prep = { |model|
 		~model ?? { ~model = model };
+		~viewSize = ~model.tryPerform(\viewSize) ?? { Point(320, 240) };
+		~gridSize = ~viewSize / ~model.dim;
 		~model.predict;  // need to fill some variables in the model
 		~makeController.();
 		~makeViews.();
@@ -210,17 +221,17 @@ Proto({
 	~makeViews = {
 		var drawfunc = if(Window.implClass.findRespondingMethodFor(\drawFunc_).notNil)
 		{ \drawFunc_ } { \drawHook_ };
-		~win = Window(\test, Rect(500, 50, 320, 270));
+		~win = Window(\test, Rect(500, 50, ~viewSize.x, ~viewSize.y + 30));
 		// grid background, don't redraw on every userview refresh
 		~win.perform(drawfunc, e {
 			Pen.color = ~gridColor;
 			(~model.dim + 1).do { |i|
-				Pen.moveTo(Point(0, i * 48)).lineTo(Point(320, i * 48))
-				.moveTo(Point(i * 64, 0)).lineTo(Point(i * 64, 240));
+				Pen.moveTo(Point(0, i * ~gridSize.y)).lineTo(Point(320, i * ~gridSize.y))
+				.moveTo(Point(i * ~gridSize.x, 0)).lineTo(Point(i * ~gridSize.x, 240));
 			};
 			Pen.stroke;
 		});
-		~uview = UserView(~win, Rect(0, 0, 320, 240));
+		~uview = UserView(~win, Rect(0, 0, ~viewSize.x, ~viewSize.y));
 		~uview.drawFunc_(e {
 			~updateView.();
 		});

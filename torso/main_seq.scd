@@ -14,7 +14,7 @@
 
 // this block loads everything: cursor on open-paren, then ctrl-alt-x
 (
-var	mypath = thisProcess.nowExecutingPath, indices;
+var	mypath = thisProcess.nowExecutingPath, indices, motionListener, motionGui;
 if(BP.exists(\transports)) { BP(\transports).free };
 
 if(~useVideo ? true) {
@@ -22,8 +22,10 @@ if(~useVideo ? true) {
 	"ps x | grep 'pd-extended' | grep -v 'grep'".unixCmd(e { |result|
 		if(result > 0) {
 			// pd is not running; load the video patch
-			"pd-extended %".format((mypath.dirname +/+
-				"../vtest/frame-diff5.pd").escapeChar($ )).unixCmd;
+			"pd-extended %".format(
+				(HrVideoData.filenameSymbol.asString.dirname.dirname.dirname
+					+/+ "common/frame-diff-gem-no-close.pd").escapeChar($ )
+			).unixCmd;
 		};
 	}, postOutput: true);  // postOutput is required to avoid "broken pipe"
 };
@@ -178,18 +180,27 @@ s.waitForBoot {
 
 	BP(#[mg, ml]).free;
 	if(~useVideo) {
-		(mypath.dirname.dirname +/+ "common/motion-detection.scd").loadPath;
-		(mypath.dirname.dirname +/+ "torso/tracking-defs.scd").loadPath;
+		// (mypath.dirname.dirname +/+ "common/motion-detection.scd").loadPath;
 
 		0.1.wait;
-		PR(\motionListener).chuck(BP(\ml), nil, (ptNum: 3));
-		0.1.wait;  // for some reason, immediate doesn't work...?
-		PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
+		// dim is x and y size; ptNum is the number of points for the regression units
+		// PR(\motionListener).chuck(BP(\ml), nil, (dim: 3, ptNum: 3));
+		// 0.1.wait;  // for some reason, immediate doesn't work...?
+		// PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
+
+		motionListener = HrVideoListener(3);
+		motionGui = HrVideoAngleGui(motionListener);
 
 		~videoStarter.remove;
 		~videoStarter = SimpleController(~seq)
-		.put(\play, { BP(\mg).cameraPowerSwitch(1); })
-		.put(\stop, { BP(\mg).cameraPowerSwitch(0); });
+		.put(\play, { motionGui.cameraPowerSwitch(1); })
+		.put(\stop, { motionGui.cameraPowerSwitch(0); });
+
+		ShutDown.add { motionGui.pdAddr.sendMsg('/quitPd') };
+
+		Library.put(\motionListener, motionListener);
+		Library.put(\motionGui, motionGui);
+		(mypath.dirname.dirname +/+ "torso/tracking-defs.scd").loadPath;
 	};
 };
 )

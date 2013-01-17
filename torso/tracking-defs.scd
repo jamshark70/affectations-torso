@@ -1,6 +1,7 @@
 // motion tracking
 // different objects per section
 
+var ml = Library.at(\motionListener), mg = Library.at(\motionGui);
 
 // abstract prototype
 
@@ -30,12 +31,12 @@ make: { |name|
 	BP(name).free;
 
 	PR(\viztrig).clone({
-		~model = BP(\ml);
+		~model = ml;
 		~keep = 10;
 		~reqd = 5;
 		~checkX = 3;
 		~leftThresh = -0.55;
-		~rightThresh = 0.7;
+		~rightThresh = 0.55;
 		~sign = 0;
 		~userprep = {
 			~last = Array.fill(~keep, 0@0);
@@ -80,7 +81,7 @@ make: { |name|
 // t2010 and 2020 -- same prototype for both
 
 PR(\viztrig).clone({
-	~model = BP(\ml);
+	~model = ml;
 	~soloproc = \ssd;
 	~panMulAdd = #[1, 0];
 	~keep = 5;
@@ -92,9 +93,9 @@ PR(\viztrig).clone({
 	~wildDuration = 4;
 	~lastWildTime = 0;
 	~ffreqIsOverridden = false;
-	
+
 	~userprep = {
-		~last = Array.fill(~keep, 0);
+		// ~last = Array.fill(~keep, 0);
 
 		~panCtl = BP(~soloproc).gcs[\pan];
 		~panLag = ~panCtl.automate({ |pan = 0, lag = 0.15|
@@ -129,25 +130,21 @@ PR(\viztrig).clone({
 		};
 	};
 
+	// ~clusters = {
+	// 	var km = KMeans(2);
+	// 	~model.points.do { |pt| km.add([pt.xabs, pt.yabs]) };
+	// 	km.update;
+	// 	km
+	// };
+
 	~respond = {
-		var	ct = ~model.kmeans.centroids;
-		if(ct.size == 2) {
-			~last[~i] = (ct[1] - ct[0]).squared.sum.sqrt; // sqrt(dx**2 + dy**2)
-
-			if(
-				~model.normmag > ~magThresh and: {
-					~every.(~last, ~i - ~reqd + 1, ~i, _ > ~wildThresh)
-					and: { (thisThread.beats - ~lastWildTime) > ~wildDuration }
-				}
-			) {
-				~lastWildTime = thisThread.beats;
-				~wildFire.();
-			};
-
-			~i = (~i + 1) % ~keep;
-		} {
-			~last.fill(~keep, 0);
-			~i = 0;
+		var	count = ~model.points.count { |pt| pt.mag.last > ~wildThresh };
+		if(~model.normmag > ~magThresh and: {
+			count >= 5 and: { (thisThread.beats - ~lastWildTime) > ~wildDuration }
+		}) {
+			[~model.normmag, count].debug("wild process triggered");
+			~lastWildTime = thisThread.beats;
+			~wildFire.();
 		};
 
 		// x -> pan, sth -> filter
@@ -172,14 +169,14 @@ PR(\viztrig).clone({
 (
 make: { |name|
 	BP(name).free;
-	PR(\t2010trig).chuck(BP(name), nil, (model: BP(\ml)));
+	PR(\t2010trig).chuck(BP(name), nil, (model: ml));
 }, type: \bp) => Fact(\t2010trig);
 
 (
 make: { |name|
 	BP(name).free;
 	PR(\t2010trig).chuck(BP(name), nil, (
-		model: BP(\ml),
+		model: ml,
 		soloproc: \ssd2,
 		panMulAdd: #[-1, 0]
 	));
@@ -191,7 +188,7 @@ make: { |name|
 make: { |name|
 	BP(name).free;
 	PR(\viztrig).clone({
-		~model = BP(\ml);
+		~model = ml;
 		~leftRange = [0.7pi, 1.3pi];
 		~magThresh = 0.14;
 		~decay = 0;
