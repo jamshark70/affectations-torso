@@ -19,7 +19,9 @@ ShutDown.add { motionGui.pdAddr.sendMsg('/quitPd') };
 
 u.remove; u = SimpleController(l);
 
-c.free; c = GenericGlobalControl(\test, nil, 0, [0, 1]); c.gui;
+c.free; c = GenericGlobalControl(\test, nil, 0, [0, 1]);
+c => VP(0);
+c.gui;
 // c.spec = [0, 1].asSpec;
 
 l = Library.at(\motionListener);
@@ -43,3 +45,19 @@ u.put(\allPtsReceived, {
 		{ "failed: normmag".debug }
 	};
 });
+
+BP(\t2000trig).listVars;
+
+u.put(\allPtsReceived, {
+	var sum = 0;
+	#[0].do { |ptI| sum = sum + (l.points[ptI].mag.last / l.points[ptI].maxmag) };
+	// sum = sum / 3;  // in theory, this should range 0..1
+	c.set(sum);
+});
+
+[l.points[1].mag.last, l.points[1].maxmag]
+
+ChuckableBrowser.newWindow;
+
+BP(\thr).stretchCtl.watch.gui;
+KrBusWatcher.newFrom(s).updateFreq = 6;
