@@ -190,6 +190,7 @@ s.waitForBoot {
 
 		if(Library.at(\motionListener).isNil) {
 			motionListener = HrVideoListener(3);
+			motionListener.points.do { |pt| pt.maxmag = 0.7 };
 			motionGui = HrVideoAngleGui(motionListener);
 
 			ShutDown.add { motionGui.pdAddr.sendMsg('/quitPd') };
@@ -225,13 +226,18 @@ d = DDWTimer.new;
 
 
 // if you need to clear everything, do this:
+(
 BP.all.do { |bp| if(#[mstClock, di, traj, mg, ml].includes(bp.collIndex).not) { bp.free } }; VC.all.free;
 if(BP.exists(\mstClock)) { BP(\mstClock).free };
 if(BP.exists(\di)) { BP(\di).free };
 if(BP.exists(\traj)) { BP(\traj).free };
+)
 
-[~glrvb, ~lcrvb, ~cavernousRvb].do(_.run(false)); [~glrvbmc, ~lcrvbmc, ~cRvbMc].do(_.mute(true));
-[~glrvb, ~lcrvb, ~cavernousRvb].do(_.run(true)); [~glrvbmc, ~lcrvbmc, ~cRvbMc].do(_.mute(false));
+[~glrvb, ~lcrvb, ~cavernousRvb].do(_.run(false));
+[~glrvbmc, ~lcrvbmc, ~cRvbMc].do(_.mute(true));
+
+[~glrvb, ~lcrvb, ~cavernousRvb].do(_.run(true));
+[~glrvbmc, ~lcrvbmc, ~cRvbMc].do(_.mute(false));
 
 ~seq.sections.do(_.prUnload);
 
