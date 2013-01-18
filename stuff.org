@@ -1,9 +1,9 @@
-* Sections: use of motion
-** T2000-low tones
+* Sections: use of motion [5/12]
+** DONE T2000-low tones
 *** Vertical motion in left or right two columns
 *** Need: threshold? Or trigger envelope by y-velocity?
-** T2001-dummy wait for solo
-** T2010-stephen solo
+** DONE T2001-dummy wait for solo
+** DONE T2010-stephen solo
 *** Count # of points with mag > a threshold
 *** Wild sweeps: move whole body
 *** Not sure yet how to do subtler modulation
@@ -11,15 +11,26 @@
 *** Two point kmeans clustering
 **** When moving a hand slowly, the clusters are located close together
 **** When moving the whole body, one cluster goes up and the other cluster goes down
-** T2020-plus Ilana
+** DONE T2020-plus Ilana
 *** Same movement vocabulary
 *** Transition: centroid goes up into top row?
-*** (That's tricky -- need to move hand while keeping the body still)
-** T2030-energy-exch
-** T2040-ensemble
-** T2050-Ilana to floor
-** T2060-Fast ensemble
-** T2070-Slow down
-** T2080-Ilana up
-** T2090-Ilana solo
-** T2100-Duet
+*** (That's tricky -- need to move hand while keeping the body still -- which makes it a good trigger!)
+** DONE T2030-energy-exch
+*** Sweep left and right for "throws"
+** TODO T2040-ensemble
+*** Bursts of activity from magnitude (should slow quickly when I slow)
+*** Track left and right magnitude
+    Left = burst in \thr
+    Right = burst in \fastnotes
+** TODO T2050-Ilana to floor
+*** Raise arm
+*** New note for motion?
+** TODO T2060-Fast ensemble
+*** Suddenly move fast
+** TODO T2070-Slow down
+*** Track speed; when it goes consistently below a threshold, go into this section?
+** TODO T2080-Ilana up
+*** Raise arm
+** TODO T2090-Ilana solo
+*** Stop? How to measure that? (Overall magnitude drops I guess)
+** TODO T2100-Duet
