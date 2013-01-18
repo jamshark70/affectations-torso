@@ -116,7 +116,7 @@
 							Fact(\t2010trig) => BP(\t2010trig);
 						};
 					}),
-					// [	15, 
+					// [	15,
 						funcCmd: (
 							dur: 15,
 							clearDoneSignal: {
@@ -138,7 +138,11 @@
 								func: {
 									var p = BP(\ssd);
 									if(p[\savesynthStream].isNil) {
-										p.override(\synth, Pseq([\amp, Pxrand(#[distance, pan, ffreq], 10)], 1));
+										p.override(
+											\synth, Pseq([\amp, Pxrand(#[distance, pan, ffreq], 10)], 1),
+											nil,
+											{ BP(~collIndex).changed(\wildGestureEnded) }
+										);
 										p.override(\delta, Pwhite(0.2, 0.8, 11));
 										p.override(\sustain, Pseq([6, (Pkey(\delta) * Pwhite(1.5, 3.0, 10))], 1), false, e { ~doneSignal = nil; ~stop.() });
 									} { ~doneSignal = nil; ~stop.() };
@@ -222,7 +226,11 @@
 									var p = BP(\ssd);
 									if(BP(\ssd)[\savesynthStream].isNil) {
 										BP(#[ssd, ssd2]).do { |p|
-											p.override(\synth, Pseq([\amp, Pxrand(#[distance, pan, ffreq], 10)], 1));
+											p.override(
+												\synth, Pseq([\amp, Pxrand(#[distance, pan, ffreq], 10)], 1),
+												nil,
+												{ BP(~collIndex).changed(\wildGestureEnded) }
+											);
 											p.override(\delta, Pwhite(0.2, 0.8, 11));
 											p.override(\sustain, Pseq([6, (Pkey(\delta) * Pwhite(1.5, 3.0, 10))], 1), false, e { ~doneSignal = nil; ~stop.() });
 										};
@@ -477,7 +485,7 @@
 							[Env.perc(0.9, 0.1, 0.5).asArray],
 							[Env.perc(0.1, 0.9, 0.5).asArray]
 						], inf);
-						
+
 						0
 					},
 					loopCmd: (
@@ -559,7 +567,7 @@
 						});
 
 						p.attackTimeScale = Pif(Pkey(\delta) > 0.18, Pwhite(0.6, 1.2, inf), 0.05);
-						p.decayTimeScale = Pif(Pbinop('==', Pkey(\freq), Pkey(\freq2)), 
+						p.decayTimeScale = Pif(Pbinop('==', Pkey(\freq), Pkey(\freq2)),
 							Pif(Pkey(\delta) > 0.18, 1.0, 0.05),
 							(Pkey(\freqlag) - Pkey(\sustain) + Pwhite(0.8, 1.2, inf))
 						);

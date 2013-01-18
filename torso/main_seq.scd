@@ -188,18 +188,24 @@ s.waitForBoot {
 		// 0.1.wait;  // for some reason, immediate doesn't work...?
 		// PR(\motionAngleGui).chuck(BP(\mg), nil, (model: BP(\ml)));
 
-		motionListener = HrVideoListener(3);
-		motionGui = HrVideoAngleGui(motionListener);
+		if(Library.at(\motionListener).isNil) {
+			motionListener = HrVideoListener(3);
+			motionGui = HrVideoAngleGui(motionListener);
+
+			ShutDown.add { motionGui.pdAddr.sendMsg('/quitPd') };
+
+			Library.put(\motionListener, motionListener);
+			Library.put(\motionGui, motionGui);
+		} {
+			motionListener = Library.at(\motionListener);
+			motionGui = Library.at(\motionGui);
+		};
 
 		~videoStarter.remove;
 		~videoStarter = SimpleController(~seq)
 		.put(\play, { motionGui.cameraPowerSwitch(1); })
 		.put(\stop, { motionGui.cameraPowerSwitch(0); });
 
-		ShutDown.add { motionGui.pdAddr.sendMsg('/quitPd') };
-
-		Library.put(\motionListener, motionListener);
-		Library.put(\motionGui, motionGui);
 		(mypath.dirname.dirname +/+ "torso/tracking-defs.scd").loadPath;
 	};
 };

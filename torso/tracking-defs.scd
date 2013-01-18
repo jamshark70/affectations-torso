@@ -85,17 +85,21 @@ PR(\viztrig).clone({
 	~soloproc = \ssd;
 	~panMulAdd = #[1, 0];
 	~keep = 5;
-	~reqd = 2;
+	~reqd = 6;  // reqd for transition to next section
 	~i = 0;
+	~segRange = #[0.008, 0.25];
+	~nextSectionThresh = -0.3;
 	~filterMagThresh = 0.3;
 	~wildThresh = 0.65;
 	~magThresh = 0.6;
 	~wildDuration = 4;
 	~lastWildTime = 0;
 	~ffreqIsOverridden = false;
+	~wildGestureRunning = false;
 
 	~userprep = {
 		// ~last = Array.fill(~keep, 0);
+		~i = ~reqd;
 
 		~panCtl = BP(~soloproc).gcs[\pan];
 		~panLag = ~panCtl.automate({ |pan = 0, lag = 0.15|
@@ -105,8 +109,13 @@ PR(\viztrig).clone({
 		~ffreqCtl = BP(~soloproc).gcs[\ffreq];
 		~ffreqUpd = Updater(BP(~soloproc), e { |obj, what, node, event|
 			var	nodeupd;
-			if(what == \node and: { event[\synthKey] == \ffreq }) {
-				if(~ffreqIsOverridden) {
+			switch(what)
+			{ \wildGestureEnded } {
+				~wildGestureRunning = false;
+				what.debug;
+			}
+			{ \node } {
+				if(event[\synthKey] == \ffreq and: { ~ffreqIsOverridden }) {
 					NodeWatcher.register(node);
 					nodeupd = SimpleController(node).put(\n_end, e {
 						nodeupd.remove;
@@ -126,6 +135,7 @@ PR(\viztrig).clone({
 		 // trigger main sequence event
 		if(BP.exists(\segTrig)) {
 			BP(~soloproc).unOverride(\synth);
+			~wildGestureRunning = true;
 			BP(\segTrig).eventTrigAction;
 		};
 	};
@@ -138,20 +148,33 @@ PR(\viztrig).clone({
 	// };
 
 	~respond = {
-		var	count = ~model.points.count { |pt| pt.mag.last > ~wildThresh };
-		if(~model.normmag > ~magThresh and: {
-			count >= 5 and: { (thisThread.beats - ~lastWildTime) > ~wildDuration }
-		}) {
-			[~model.normmag, count].debug("wild process triggered");
+		var	count;
+		// x -> pan
+		~panLag.set(\pan, ~model.centroid.x);
+
+		case
+		{ ~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y < ~nextSectionThresh } } {
+			~i = ~i - 1;
+			if(~i == 0) {
+				"trying to advance to next section".debug;
+				if(BP(\segTrig)[\segTrigAction].notNil) { BP(\segTrig).segTrigAction };
+			};
+		}
+		{
+			~i = ~reqd;
+			count = ~model.points.count { |pt| pt.mag.last > ~wildThresh };
+			~model.normmag > ~magThresh and: {
+				count >= 5 and: { (thisThread.beats - ~lastWildTime) > ~wildDuration }
+			}
+		} {
+			[~model.normmag, count].debug("BP(%): wild process triggered".format(~soloproc.asCompileString));
 			~lastWildTime = thisThread.beats;
 			~wildFire.();
-		};
-
-		// x -> pan, sth -> filter
-		~panLag.set(\pan, ~model.centroid.x);
-		if(~model.normmag >= ~filterMagThresh and: { ~ffreqIsOverridden.not }) {
+		}
+		{ ~ffreqIsOverridden.not and: { ~wildGestureRunning.not and: { ~model.normmag >= ~filterMagThresh } } } {
 			BP(~soloproc).override(\synth, Pn(\ffreq, 1));
 			~ffreqIsOverridden = true;
+			"BP(%): Overriding ffreq".format(~soloproc.asCompileString).debug;
 		};
 	};
 
