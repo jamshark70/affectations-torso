@@ -33,16 +33,23 @@ Proto({
 	~nextSegCheck = { |obj, what, moreArgs|
 		if(~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y < ~nextSectionThresh }) {
 			~segTrigCount = ~segTrigCount - 1;
+			if(~segTrigCount == 0) { \goAhead } { \notYet }
+		} {
+			\respond
 		};
-		~segTrigCount == 0
 	};
 	~resetSegCheck = { ~segTrigCount = ~segReqd };
 	~prRespond = { |obj, what, moreArgs|
-		if(~nextSegCheck) {
+		switch(~nextSegCheck.())
+		{ \goAhead } {
 			"trying to advance to next section".debug;
 			if(BP(\segTrig)[\segTrigAction].notNil) { BP(\segTrig).segTrigAction };
-		} {
+		}
+		{ \respond } {
 			~resetSegCheck.();
+			~respond.valueArray(obj, what, moreArgs);
+		}
+		{ \notYet } {
 			~respond.valueArray(obj, what, moreArgs);
 		};
 	};
