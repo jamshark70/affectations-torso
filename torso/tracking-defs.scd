@@ -116,9 +116,9 @@ PR(\viztrig).clone({
 	~soloproc = \ssd;
 	~panMulAdd = #[1, 0];
 	~keep = 5;
-	~filterMagThresh = 0.3;
-	~wildThresh = 0.65;
-	~magThresh = 0.6;
+	~filterMagThresh = 0.6;
+	~wildThresh = 0.8;
+	~magThresh = 0.7;
 	~wildDuration = 4;
 	~lastWildTime = 0;
 	~ffreqIsOverridden = false;
@@ -157,7 +157,7 @@ PR(\viztrig).clone({
 	};
 
 	~wildFire = {
-		 // trigger main sequence event
+		// trigger main sequence event
 		if(BP.exists(\segTrig)) {
 			BP(~soloproc).unOverride(\synth);
 			~wildGestureRunning = true;
@@ -245,7 +245,7 @@ make: { |name|
 		};
 		~respond = {
 			var new_theta = ~model.anglePoint.theta,
-				new_sign = ~signForAngle.(new_theta);
+			new_sign = ~signForAngle.(new_theta);
 			if(
 				~model.normmag > ~magThresh
 				and: { new_sign != 0 and: { new_sign != ~sign } }
@@ -269,3 +269,56 @@ make: { |name|
 		};
 	}) => BP(name);
 }, type: \bp) => Fact(\t2030trig);
+
+(
+make: { |name|
+	BP(name).free;
+	PR(\viztrig).chuck(BP(name), nil, (
+		model: ml,
+		ptSets: #[[0, 1, 2], [6, 7, 8]],
+		magThresh: 0.7,
+		userprep: {
+			~ctls = #[thr, fastnotes].collect { |key| BP(key).stretchCtl };
+			~autoSynths = Array.newClear(2);
+			~endResponders = Array.newClear(2);
+		},
+		userfree: {
+			~endResponders.do(_.remove);
+			~ctls.do(_.stopAuto);
+		},
+		respond: {
+			var sum, attack;
+			~ctls.do { |ctl, i|
+				if(~autoSynths[i].isNil) {
+					sum = 0;
+					~ptSets[i].do { |ptI| sum = sum + (~model.points[ptI].mag.last / ~model.points[i].maxmag) };
+					sum = sum / ~ptSets[i].size;  // in theory, this should range 0..1
+					if(sum > ~magThresh) {
+						~autoSynths[i] = ctl.automate(\ctlEnv, [
+							time: rrand(2.25, 5.75),
+							env: Env(
+								[4, rrand(0.8, 1.25), 4],
+								[attack = rrand(0.1, 0.3), 1 - attack],
+								#[-4, 2]
+							)
+						], addAction: \addToHead);
+						~endResponders[i] = SimpleController(~autoSynths[i])
+						.put(\n_end, e {
+							~autoSynths[i] = nil;
+							~endResponders[i].remove;
+						});
+					};
+				};
+			};
+		},
+		// nextSegCheck: { |obj, what, moreArgs|
+		// 	if(~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y < ~nextSectionThresh }) {
+		// 		~segTrigCount = ~segTrigCount - 1;
+		// 		if(~segTrigCount == 0) { \goAhead } { \notYet }
+		// 	} {
+		// 		\respond
+		// 	};
+		// },
+		// resetSegCheck: { ~segTrigCount = ~segReqd }
+	));
+}, type: \bp) => Fact(\t2040trig);

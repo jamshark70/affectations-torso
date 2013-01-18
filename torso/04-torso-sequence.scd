@@ -267,6 +267,7 @@
 			BP(\td).droneamp = 4.dbamp;
 			BP(\td).rq = 0.11;
 			BP(\td).fshift = Pwhite(4.0, 12.0, inf);
+			BP(\t2030trig).free;
 		},
 		unloadProcesses: { BP(#[td, thr]).free },
 		seqPattern: {
@@ -283,7 +284,9 @@
 						bp.throwampenv = `[Env(#[0, 0.1, 1, 0.1, 0] * 0.5, #[0.3, 0.1, 0.1, 0.5], \sin)];
 						bp.amp = 1;
 						bp.prepareForPlay;
-						Fact(\t2030trig) => BP(\t2030trig);
+						if(topEnvironment[\useVideo]) {
+							Fact(\t2030trig) => BP(\t2030trig);
+						};
 						0
 					},
 					bpCmd: (name: \td, shouldSync: false, prepareBP: { |bp|
@@ -314,6 +317,7 @@
 			BP(\fastnotes)[\originalRotSynthDef] ?? {
 				BP(\fastnotes).originalRotSynthDef = BP(\fastnotes).rotSynthDef;
 			};
+			BP(\t2040trig).free;
 		},
 		unloadProcesses: {
 			VC(\tmel).free; BP(\fastnotes).free;
@@ -321,6 +325,12 @@
 		seqPattern: {
 			Pn((
 				sequence: [
+					{
+						if(topEnvironment[\useVideo]) {
+							Fact(\t2040trig) => BP(\t2040trig);
+						};
+						0
+					},
 					bpCmd: (name: \thr, shouldSync: false, playWarning: false),
 					bpCmd: (name: \td, shouldSync: false, playWarning: false),
 					{	var r = BP(\thr);
@@ -332,9 +342,9 @@
 								var	curve = Env([rrand(0.06, 0.09), rrand(0.18, 0.35)], #[1], 5).asArray;
 								Pseries.fromEndpoints(0.0, 1.0, rrand(8, 14)).collect { |x| curve.envAt(x) }
 							})
-						], inf) * Env(#[4, 1], #[8], -2);
+						], inf) * /*Env(#[4, 1], #[8], -2) **/ r.stretchCtl;
 
-						r.sustain = max(0.08, Pkey(\delta) * Pwhite(0.25, 0.6, inf));
+						r.sustain = max(0.08, Pkey(\delta) * Pwhite(0.25, 0.6, inf) /** r.stretchCtl*/);
 
 						r.throwfLow = Prand([
 							Plazy({ Pser({ exprand(600, 1400) } ! 2, rrand(2, 4) * 2 + 1) }),
@@ -355,7 +365,8 @@
 						bp.mod_ratio = Pwhite(2, 7, inf) + Pwhite(0.14, 0.88, inf);
 						bp.mod_lev = Pexprand(6, 14, inf);
 						bp.finalAmp = VC(\tmel).v.globalControls[\finalAmp].asMap;
-						bp.changingDelta = bp.originalDelta;
+						bp.changingDelta = bp.originalDelta * bp.stretchCtl;
+						// bp.sustain = max(0.08, Pkey(\delta) * Pwhite(0.25, 0.6, inf) * bp.stretchCtl);
 						bp.rotSynthDef = bp.originalRotSynthDef;
 						VC(bp.vcKey).env.modfx.set(\distFar, 20);
 					}),
@@ -365,7 +376,7 @@
 						time: 1
 					),
 				],
-				onStop: { BP(#[thr, td]).stop(0) },
+				onStop: { BP(#[thr, td]).stop(0); BP(\t2040trig).free; },
 				dur: \trigger,  // or \sync
 				id: 2050,  // trig id
 				init: Func(\nextThingTrig).v,

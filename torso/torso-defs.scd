@@ -2,7 +2,7 @@
 // just in case... (won't load twice if already loaded)
 (thisProcess.nowExecutingPath.dirname.dirname +/+ "common/common-defs.scd").loadPath;
 
-// armsChordVC cribbed from 
+// armsChordVC cribbed from
 // this loads common-defs, so above is deprecated
 (
 WrapInstr("osc2.fm2car_stereo", { arg physicalPan = 0, freq, freqlag = 0, gate, car_env, mod_env,
@@ -215,16 +215,16 @@ make: { |name|
 		out.mapGlobal(\rq, nil, 1.0, \myrq);
 	};
 	// out.mapGlobal(\fenvsens, nil, 1.0, #[0.1, 15, \exp]);
-	
+
 	// ~target.doWhenReady({ |chan|
 	// 	chan.playfx({ |outbus|
 	// 		RLPF.ar(In.ar(outbus, 1),
-	// 			out.globalControls[\ffreq].kr, 
+	// 			out.globalControls[\ffreq].kr,
 	// 			out.globalControls[\rq].kr
 	// 		)
 	// 	})
 	// });
-	
+
 	out
 }, free: { [~target, ~bufs].free }, type: \voicer) => Fact(\shimmerpad);
 
@@ -544,7 +544,7 @@ make: { |name|
 				* (numbufs - 1)).clip(0, numbufs - 1.001);
 		WrapInstr.wrap([\osc2, \vosc3], [newfreq, gate, bufbase, freqmap]);
 	}, [\freq, [0, 1000, \linear, 1, 0], [0, 20, \lin, 1, 0], \freq, \freq, NoLagControlSpec(0, 1), #[0.5, 2, \exp, 0, 1]]);
-	
+
 	WrapInstr("osc2.vosc3mapfiltenv", { |gate = 1, ffreq, rq, fenv, fenv_sens, fenv_vsens, fenv_tscale = 1, pan = 0|
 		var	sig = WrapInstr.wrap("osc2.vosc3map2", (nil ! 5) ++ [gate]),
 			glatch = Latch.kr(gate, gate),
@@ -634,7 +634,7 @@ PR(\arpeg1).clone {
 	};
 } => PR(\arpeg1PreInsert);
 
-{ |notes, inEvent| 
+{ |notes, inEvent|
 	if(notes.isArray) {
 		Pn(notes.keep(min(notes.size, inEvent[\numNotes])), 1)
 	} {
@@ -755,7 +755,7 @@ free: {
 			defaultDetune: 2.234,
 			car_amps: Array.squareAmps(5),
 			mod_amps: Array.sawtoothAmps(5), //#[1],
-			car_env: Env.adsr(0.5, 0.8, 0.75, 1.0),            
+			car_env: Env.adsr(0.5, 0.8, 0.75, 1.0),
 			mod_env: Env.adsr(0.01, 2.5, 0.75, 1, curve: -2.5),
 			keyScale: 0.3669,
 			defaultCarVs: 0.145,
@@ -785,7 +785,7 @@ PR(\abstractProcess).clone {
 	~continuous_ = { |bool = false|
 		~continuous = ~alwaysReset = bool;
 		currentEnvironment
-	};		
+	};
 
 	~prep = {
 		~event.proto_(topEnvironment[\rvbEvent].proto.copy.putAll((distNear: 5, distFar: 50)));
@@ -951,7 +951,7 @@ PR(\abstractProcess).clone {
 		~makeStreams.(true);
 		~makeRewriters.();
 	};
-		
+
 } => PR(\torsoMel);
 
 
@@ -1175,11 +1175,11 @@ make: { |name|
 	}).add;
 
 	out = Voicer(25, ~defname, target: ~target);
-	
+
 	out.mapGlobal(\ffreq, nil, 14000, \freq);
 	out.mapGlobal(\rq, nil, 1.0, \myrq);
 	// out.mapGlobal(\fenvsens, nil, 1.0, #[0.1, 15, \exp]);
-	
+
 	out
 }, free: { [~target, ~bufs].free }, type: \voicer) => Fact(\modpad);
 
@@ -1447,6 +1447,7 @@ make: { |name|
 		sustain: Pexprand(0.7, 2.8, inf), //Pwhite(1.0, 5.5, inf),
 		amp: 1,
 		userprep: {
+			~stretchCtl = GenericGlobalControl((~collIndex ++ "Stretch").asSymbol, nil, 4, #[0.1, 10, \exp]);
 			~noisebuf = Buffer.sendCollection(s, Signal.fill(1024, { 1.0.rand2 }).asWavetable, wait: -1);
 			[~glrvbmc, ~lcrvbmc].do { |mc|
 				mc.tryPerform(\receivesSignalFrom, ~chan);
@@ -1454,7 +1455,7 @@ make: { |name|
 			~event.proto = topEnvironment[\rvbEvent].proto;
 		},
 		userfree: {
-			~noisebuf.free;
+			[~noisebuf, ~stretchCtl].free;
 		},
 		objects: { (
 			throw: (
@@ -1529,7 +1530,7 @@ make: { |name|
 			~event.proto = topEnvironment[\rvbEvent].proto;
 			~event.put(\chan, nil);  // these are kr synths, shouldn't use MixerCh's bus
 			~event.put(\target, ~chan.synthgroup);  // ignored for sound-synth event (w/ ~chan)
-	
+
 			~gcs = ~gcSpecs.collect { |spec, name|
 				spec = spec.asSpec;
 				GenericGlobalControl(name, nil, spec.default, spec);
@@ -1917,12 +1918,14 @@ PR(\abstractProcess).clone {
 		// ~event[\vizKeys] = Library.at(\defaultVizKeys).copy
 		// .put(6, ~ctlBus.asMap).put(7, ("c" ++ (~ctlBus.index+1)).asSymbol);
 		~event.put(\pan, ~ctlBus.asMap).put(\distance, ("c" ++ (~ctlBus.index+1)).asSymbol);
+		~userprep.();
 	};
 	~freeCleanup = {
 		if(~controlsVCPos and: { VC.exists(~vcKey) and: { VC(~vcKey).env[\modfx].notNil } }) {
 			VC(~vcKey).env[\modfx].map(\distance, -1, \pan, -1, \fshift, -1)
 		};
-		~ctlBus.free
+		~ctlBus.free;
+		~userfree.();
 	};
 
 	// Plazy? Yeah... ~freq is actually a Preject
@@ -2047,7 +2050,7 @@ PR(\abstractProcess).clone {
 			VC(~vcKey).env[\modfx].map(*(
 				[#[pan, distance, fshift], ~ctlBus.index + #[0, 1, 2]].flop.flat
 			))
-		};		
+		};
 	};
 
 	~reset = {
@@ -2061,38 +2064,44 @@ PR(\abstractProcess).clone {
 
 
 (make: { |name|
-PR(\tposes).chuck(BP(name), nil, (
-	controlsVCPos: false,  // REENABLE FOR SEQUENCE
-	mode: Pseq([
-		Pn(\a0, { rrand(25, 65) }),
-		Pstutter(Pwhite(6, 10, { rrand(1, 3) }),
-			Pxrand(Mode.keys.select { |key| key != \a0 and: { key.asString.last == $0 } }.asArray, inf)
+	PR(\tposes).chuck(BP(name), nil, (
+		controlsVCPos: false,  // REENABLE FOR SEQUENCE
+		userprep: {
+			~stretchCtl = GenericGlobalControl((~collIndex ++ "Stretch").asSymbol, nil, 4, #[0.1, 10, \exp]);
+		},
+		userfree: {
+			~stretchCtl.free;
+		},
+		mode: Pseq([
+			Pn(\a0, { rrand(25, 65) }),
+			Pstutter(Pwhite(6, 10, { rrand(1, 3) }),
+				Pxrand(Mode.keys.select { |key| key != \a0 and: { key.asString.last == $0 } }.asArray, inf)
+			)
+		], inf).collect { |mode| ~lastMode = mode },
+		num: Pwrand(#[1, 2, 3], #[0.7, 0.2, 0.1], inf),
+		freq: Pvbrown(28, 47, Pwhite(3, 6, inf), inf) - Pfunc({ |ev|
+			var	n;
+			~numStream ?? { ~makeStreamForKey.(\num) };
+			n = ~numStream.next(ev);
+			(#[0] ++ ({ #[1, 2, 3].wchoose(#[0.2, 0.45, 0.35]) } ! (n-1))).integrate
+		}),
+		freq2: Pkey(\freq) * Pif(0.02.asPattern.coin, Pwhite(0.6, 0.8, inf), 1),
+		freqlag: Pif(Pbinop('==', Pkey(\freq), Pkey(\freq2)), 0, Pwhite(0.2, 0.8, inf)),
+		changingDelta: Prand([
+			Pstutter(inf, Pexprand(0.08, 0.14, 1)) * Pseq([Pn(1, { rrand(3, 7) }), 3], 1),
+			Pexprand(0.08, 0.2, { rrand(8, 17) }),
+			Plazy({
+				var	curve = Env([rrand(0.06, 0.09), rrand(0.18, 0.35)], #[1], 5).asArray;
+				Pseries.fromEndpoints(0.0, 1.0, rrand(8, 14)).collect { |x| curve.envAt(x) }
+			})
+		], inf),
+		sustain: max(0.08, Pkey(\delta) * Pwhite(0.25, 0.6, inf)),
+		attackTimeScale: 0.1,
+		decayTimeScale: Pif(Pbinop('==', Pkey(\freq), Pkey(\freq2)), 0.4,
+			(Pkey(\freqlag) - Pkey(\sustain) + Pwhite(0.4, 0.8, inf))
 		)
-	], inf).collect { |mode| ~lastMode = mode },
-	num: Pwrand(#[1, 2, 3], #[0.7, 0.2, 0.1], inf),
-	freq: Pvbrown(28, 47, Pwhite(3, 6, inf), inf) - Pfunc({ |ev|
-		var	n;
-		~numStream ?? { ~makeStreamForKey.(\num) };
-		n = ~numStream.next(ev);
-		(#[0] ++ ({ #[1, 2, 3].wchoose(#[0.2, 0.45, 0.35]) } ! (n-1))).integrate
-	}),
-	freq2: Pkey(\freq) * Pif(0.02.asPattern.coin, Pwhite(0.6, 0.8, inf), 1),
-	freqlag: Pif(Pbinop('==', Pkey(\freq), Pkey(\freq2)), 0, Pwhite(0.2, 0.8, inf)),
-	changingDelta: Prand([
-		Pstutter(inf, Pexprand(0.08, 0.14, 1)) * Pseq([Pn(1, { rrand(3, 7) }), 3], 1),
-		Pexprand(0.08, 0.2, { rrand(8, 17) }),
-		Plazy({
-			var	curve = Env([rrand(0.06, 0.09), rrand(0.18, 0.35)], #[1], 5).asArray;
-			Pseries.fromEndpoints(0.0, 1.0, rrand(8, 14)).collect { |x| curve.envAt(x) }
-		})
-	], inf),
-	sustain: max(0.08, Pkey(\delta) * Pwhite(0.25, 0.6, inf)),
-	attackTimeScale: 0.1,
-	decayTimeScale: Pif(Pbinop('==', Pkey(\freq), Pkey(\freq2)), 0.4,
-		(Pkey(\freqlag) - Pkey(\sustain) + Pwhite(0.4, 0.8, inf))
-	)
-));
-0 => BP(name);
+	));
+	0 => BP(name);
 }, type: \bp) => Fact(\fastnotesBP);
 
 
@@ -2129,7 +2138,7 @@ PR(\tposes).chuck(BP(name), nil, (
 		mode: \d,
 		pan: Plazy({ Pn(~panCtl.asMap, inf) }),
 		distance: Plazy({ Pn(~distanceCtl.asMap, inf) }),
-	
+
 		superPrep: PR(\melody).v[\prep],
 		prep: {
 			~superPrep.();
