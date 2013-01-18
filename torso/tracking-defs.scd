@@ -7,7 +7,15 @@ var ml = Library.at(\motionListener), mg = Library.at(\motionGui);
 
 Proto({
 	~listenKey = \allPtsReceived;
+
+	~segReqd = 6;  // reqd for transition to next section
+	~segTrigCount = 0;
+	~segRange = #[0.008, 0.25];
+	~nextSectionThresh = -0.3;
+
 	~prep = {
+		~resetSegCheck.();
+
 		~makeListener.();
 		~userprep.();
 		currentEnvironment
@@ -19,8 +27,24 @@ Proto({
 	~makeListener = {
 		~resp = SimpleController(~model)
 		.put(~listenKey, e { |obj, what ... moreArgs|
-			~respond.valueArray(obj, what, moreArgs)
+			~prRespond.value(obj, what, moreArgs)
 		});
+	};
+	~nextSegCheck = { |obj, what, moreArgs|
+		if(~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y < ~nextSectionThresh }) {
+			~segTrigCount = ~segTrigCount - 1;
+		};
+		~segTrigCount == 0
+	};
+	~resetSegCheck = { ~segTrigCount = ~segReqd };
+	~prRespond = { |obj, what, moreArgs|
+		if(~nextSegCheck) {
+			"trying to advance to next section".debug;
+			if(BP(\segTrig)[\segTrigAction].notNil) { BP(\segTrig).segTrigAction };
+		} {
+			~resetSegCheck.();
+			~respond.valueArray(obj, what, moreArgs);
+		};
 	};
 }) => PR(\viztrig);
 
@@ -85,10 +109,6 @@ PR(\viztrig).clone({
 	~soloproc = \ssd;
 	~panMulAdd = #[1, 0];
 	~keep = 5;
-	~reqd = 6;  // reqd for transition to next section
-	~i = 0;
-	~segRange = #[0.008, 0.25];
-	~nextSectionThresh = -0.3;
 	~filterMagThresh = 0.3;
 	~wildThresh = 0.65;
 	~magThresh = 0.6;
@@ -99,8 +119,6 @@ PR(\viztrig).clone({
 
 	~userprep = {
 		// ~last = Array.fill(~keep, 0);
-		~i = ~reqd;
-
 		~panCtl = BP(~soloproc).gcs[\pan];
 		~panLag = ~panCtl.automate({ |pan = 0, lag = 0.15|
 			VarLag.kr(pan, lag).madd(*(~panMulAdd));
@@ -153,15 +171,7 @@ PR(\viztrig).clone({
 		~panLag.set(\pan, ~model.centroid.x);
 
 		case
-		{ ~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y < ~nextSectionThresh } } {
-			~i = ~i - 1;
-			if(~i == 0) {
-				"trying to advance to next section".debug;
-				if(BP(\segTrig)[\segTrigAction].notNil) { BP(\segTrig).segTrigAction };
-			};
-		}
 		{
-			~i = ~reqd;
 			count = ~model.points.count { |pt| pt.mag.last > ~wildThresh };
 			~model.normmag > ~magThresh and: {
 				count >= 5 and: { (thisThread.beats - ~lastWildTime) > ~wildDuration }
