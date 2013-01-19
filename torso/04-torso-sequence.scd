@@ -343,6 +343,7 @@
 								Pseries.fromEndpoints(0.0, 1.0, rrand(8, 14)).collect { |x| curve.envAt(x) }
 							})
 						], inf) * /*Env(#[4, 1], #[8], -2) **/ r.stretchCtl;
+						r.stretchCtl.watch;
 
 						r.sustain = max(0.08, Pkey(\delta) * Pwhite(0.25, 0.6, inf) /** r.stretchCtl*/);
 
@@ -356,7 +357,7 @@
 							[Env.perc(0.9, 0.1, 0.2).asArray],
 							[Env.perc(0.1, 0.9, 0.2).asArray]
 						], inf);
-						r.amp = 1;
+						r.amp = r.stretchCtl.asPattern.linlin(1, 4, 4.dbamp, 1);
 						6
 					},
 					bpCmd: (name: \fastnotes, shouldSync: false, prepareBP: { |bp|
@@ -368,6 +369,7 @@
 						bp.changingDelta = bp.originalDelta * bp.stretchCtl;
 						// bp.sustain = max(0.08, Pkey(\delta) * Pwhite(0.25, 0.6, inf) * bp.stretchCtl);
 						bp.rotSynthDef = bp.originalRotSynthDef;
+						bp.stretchCtl.watch;
 						VC(bp.vcKey).env.modfx.set(\distFar, 20);
 					}),
 					gcAutoSynthCmd: (gc: { VC(\tmel).v.globalControls[\finalAmp] },
@@ -376,7 +378,10 @@
 						time: 1
 					),
 				],
-				onStop: { BP(#[thr, td]).stop(0); BP(\t2040trig).free; },
+				onStop: {
+					BP(#[thr, td]).stop(0);
+					BP(\t2040trig).free;
+				},
 				dur: \trigger,  // or \sync
 				id: 2050,  // trig id
 				init: Func(\nextThingTrig).v,
@@ -409,7 +414,8 @@
 					gcAutoSynthCmd: (gc: { VC(\tmel).v.globalControls[\finalAmp] },
 						name: \ctlEnv, outName: \outbus, shouldSync: false,
 						env: Env(#[0.16, 0.16], #[1], \exp), connect: 1,
-						time: 6
+						time: 6,
+						stopAction: { BP(\fastnotes).stretchCtl.stopWatching }
 					),
 					synthCmd: (
 						name: \nrgxch2, target: VC(\tmel).env.target,

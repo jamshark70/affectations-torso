@@ -277,48 +277,54 @@ make: { |name|
 		model: ml,
 		ptSets: #[[0, 1, 2], [6, 7, 8]],
 		magThresh: 0.7,
+		minRetrigTime: 1.0,
 		userprep: {
 			~ctls = #[thr, fastnotes].collect { |key| BP(key).stretchCtl };
 			~autoSynths = Array.newClear(2);
-			~endResponders = Array.newClear(2);
+			// ~endResponders = Array.newClear(2);
+			~autoTimes = Array.fill(2, 0);
 		},
 		userfree: {
 			~endResponders.do(_.remove);
 			~ctls.do(_.stopAuto);
 		},
+		autoEnvMiddle: [{ rrand(0.8, 1.25) }, { rrand(0.1, 0.4) }],
 		respond: {
-			var sum, attack;
+			var sum, attack, autotime;
 			~ctls.do { |ctl, i|
-				if(~autoSynths[i].isNil) {
+				if(SystemClock.beats - ~autoTimes[i] > ~minRetrigTime) {
 					sum = 0;
 					~ptSets[i].do { |ptI| sum = sum + (~model.points[ptI].mag.last / ~model.points[i].maxmag) };
 					sum = sum / ~ptSets[i].size;  // in theory, this should range 0..1
 					if(sum > ~magThresh) {
 						~autoSynths[i] = ctl.automate(\ctlEnv, [
-							time: rrand(2.25, 5.75),
+							time: autotime = rrand(2.25, 5.75),
 							env: Env(
-								[4, rrand(0.8, 1.25), 4],
-								[attack = rrand(0.1, 0.3), 1 - attack],
+								[4, ~autoEnvMiddle[i].value, 4],
+								[attack = rrand(0.04, 0.16), 1.0 - attack],
 								#[-4, 2]
 							)
 						], addAction: \addToHead);
-						~endResponders[i] = SimpleController(~autoSynths[i])
-						.put(\n_end, e {
-							~autoSynths[i] = nil;
-							~endResponders[i].remove;
-						});
+						~autoTimes[i] = SystemClock.beats;
+						// ~endResponders[i] = SimpleController(~autoSynths[i])
+						// .put(\n_end, e {
+						// 	~autoSynths[i] = nil;
+						// 	~endResponders[i].remove;
+						// });
+						// total hack: this is not properly abstracted
+						if(i == 1) {
+							VC(\tmel).globalControls[\finalAmp].automate(\ctlEnv, [
+								time: autotime,
+								env: Env(
+									[0.11, rrand(0.175, 0.195), 0.11],
+									[attack, 1.0 - attack],
+									#[-2, 2]
+								)
+							], addAction: \addToHead);
+						};
 					};
 				};
 			};
 		},
-		// nextSegCheck: { |obj, what, moreArgs|
-		// 	if(~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y < ~nextSectionThresh }) {
-		// 		~segTrigCount = ~segTrigCount - 1;
-		// 		if(~segTrigCount == 0) { \goAhead } { \notYet }
-		// 	} {
-		// 		\respond
-		// 	};
-		// },
-		// resetSegCheck: { ~segTrigCount = ~segReqd }
 	));
 }, type: \bp) => Fact(\t2040trig);

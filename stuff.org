@@ -1,4 +1,4 @@
-* Sections: use of motion [5/12]
+* Sections: use of motion [6/12]
 ** DONE T2000-low tones
 *** Vertical motion in left or right two columns
 *** Need: threshold? Or trigger envelope by y-velocity?
@@ -17,14 +17,15 @@
 *** (That's tricky -- need to move hand while keeping the body still -- which makes it a good trigger!)
 ** DONE T2030-energy-exch
 *** Sweep left and right for "throws"
-** TODO T2040-ensemble
+** DONE T2040-ensemble
 *** Bursts of activity from magnitude (should slow quickly when I slow)
 *** Track left and right magnitude
     Left = burst in \thr
     Right = burst in \fastnotes
 ** TODO T2050-Ilana to floor
 *** Raise arm
-*** New note for motion?
+*** New note for motion -- tough, want to keep movement slow
+*** Pipe some motion control into rotSynth
 ** TODO T2060-Fast ensemble
 *** Suddenly move fast
 ** TODO T2070-Slow down
