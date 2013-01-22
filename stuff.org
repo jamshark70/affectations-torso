@@ -1,4 +1,4 @@
-* Sections: use of motion [6/12]
+* Sections: use of motion [7/12]
 ** DONE T2000-low tones
 *** Vertical motion in left or right two columns
 *** Need: threshold? Or trigger envelope by y-velocity?
@@ -22,12 +22,13 @@
 *** Track left and right magnitude
     Left = burst in \thr
     Right = burst in \fastnotes
-** TODO T2050-Ilana to floor
+** DONE T2050-Ilana to floor
 *** Raise arm
 *** New note for motion -- tough, want to keep movement slow
 *** Pipe some motion control into rotSynth
 ** TODO T2060-Fast ensemble
 *** Suddenly move fast
+*** NEEDS TO BE MUCH LOUDER
 ** TODO T2070-Slow down
 *** Track speed; when it goes consistently below a threshold, go into this section?
 ** TODO T2080-Ilana up

@@ -1952,20 +1952,24 @@ PR(\abstractProcess).clone {
 	~decayTimeScale = max(Pkey(\attackTimeScale), 2.5);
 	~finalAmp = 0.16;
 
-	~rotSynthDef = SynthDef(~collIndex ++ "Rotate", { |outbus|
-		var	radius = LFDNoise1.kr(Rand(0.1, 0.4)).range(0.5, 1.0),
-		angle = Integrator.kr(LFDNoise1.kr(Rand(0.5, 1.1)).range(0.1, 0.6) * ControlDur.ir);
+	~rotSynthDef = SynthDef(~collIndex ++ "Rotate", { |outbus,
+		radiusRate = 0.4, angleRate = 0.5, angleLow = 0.1, angleHi = 0.6|
+		var	radius = LFDNoise1.kr(radiusRate).range(0.5, 1.0),
+		angle = Integrator.kr(LFDNoise1.kr(angleRate).range(angleLow, angleHi) * ControlDur.ir);
 		Out.kr(outbus, [
 			cos(angle) * radius,
 			(sin(angle) * radius).linlin(-1.0, 1.0, 5.0, 20.0),
 			LFDNoise1.kr(0.07).exprange(0.001, 8)
 		]);
-	});
+	}, #[nil, 0.1, 0.1, 0.1, 0.1]);
 	~preparePlay = {
 		// ~rotSynth !? { ~rotSynth.free };
 		if(~controlsVCPos and: { ~rotSynth.isNil }) {
 			"making rotsynth".debug;
-			~rotSynth = ~rotSynthDef.play(VC(~vcKey).env.target.fadergroup, [outbus: ~ctlBus], addAction: \addToHead);
+			~rotSynth = ~rotSynthDef.play(VC(~vcKey).env.target.fadergroup, [
+				radiusRate: rrand(0.1, 0.4), angleRate: rrand(0.5, 1.1),
+				outbus: ~ctlBus
+			], addAction: \addToHead);
 			VC(~vcKey).env[\modfx].map(*(
 				[#[pan, distance, fshift], ~ctlBus.index + #[0, 1, 2]].flop.flat
 			))
@@ -2055,8 +2059,11 @@ PR(\abstractProcess).clone {
 
 	~reset = {
 		~delta = ~changingDelta;
-		#[delta, freq, freq2, freqlag, sustain].do { |key|
-			~makeStreamForKey.(key)
+		~makeStreamForKey.(\delta);
+		if(~resetAllSources) {
+			#[freq, freq2, freqlag, sustain].do { |key|
+				~makeStreamForKey.(key)
+			};
 		};
 	};
 } => PR(\tposes);

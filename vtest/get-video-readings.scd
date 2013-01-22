@@ -17,14 +17,15 @@ g = HrVideoAngleGui(l, pdAddr: NetAddr("127.0.0.1", 57122));
 ShutDown.add { motionGui.pdAddr.sendMsg('/quitPd') };
 )
 
+l = Library.at(\motionListener);
+
 u.remove; u = SimpleController(l);
 
 c.free; c = GenericGlobalControl(\test, nil, 0, [0, 1]);
 c => VP(0);
 c.gui;
 // c.spec = [0, 1].asSpec;
-
-l = Library.at(\motionListener);
+c =>.3 VP(4);
 
 u.put(\allPtsReceived, { c.set(l.points[0].mag.last) });
 
@@ -119,3 +120,42 @@ BP(\t2040trig).respond = {
 	};
 };
 )
+
+
+u.put(\allPtsReceived, {
+	VC(\tmel).v.set([mod_lev: l.centroid.y.linexp(-1, 1, 9.0, 0.8)]);
+});
+
+
+BP(\t2050trig).nextSegCondition = {
+	~model.points.count({ |pt| pt.mag.last > ~segThresh }).debug("count") > ~reqdPoints
+};
+
+BP(\t2050trig).segThresh = 0.5;
+BP(\t2050trig).reqdPoints = 4;
+
+
+BP(\t2050trig).updateSynths = {
+			~voicer.set([mod_lev: ~model.centroid.y.linexp(-1, 1, 9.0, 0.8)]);
+			if(BP(\tp)[\rotSynth].notNil) {
+				BP(\tp)[\rotSynth].set(\angleRate, ~model.normmag.linlin(0, 0.6, 0.5, 7.0));
+			};
+		};
+
+BP(\tp).rotSynth.get(\angleRate, { |d| d.debug("\tgot") });
+
+BP(\tp).rotSynth.trace;
+
+BP(\t2050trig).trigThresh = 0.25;
+
+BP(\t2050trig).respond = {
+	~updateSynths.();
+	if(BP(\segTrig)[\eventTrigAction].notNil and: { ~model.normmag > ~trigThresh }) {
+		~trigCount = ~trigCount - 1;
+		if(~trigCount == 0) {
+			BP(\segTrig).eventTrigAction;
+		};
+	} {
+		~trigCount = ~segReqd;
+	};
+},

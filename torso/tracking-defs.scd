@@ -30,8 +30,11 @@ Proto({
 			~prRespond.value(obj, what, moreArgs)
 		});
 	};
+	~nextSegCondition = {
+		~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y < ~nextSectionThresh }
+	};
 	~nextSegCheck = { |obj, what, moreArgs|
-		if(~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y < ~nextSectionThresh }) {
+		if(~nextSegCondition.()) {
 			~segTrigCount = ~segTrigCount - 1;
 			if(~segTrigCount == 0) { \goAhead } { \notYet }
 		} {
@@ -328,3 +331,42 @@ make: { |name|
 		},
 	));
 }, type: \bp) => Fact(\t2040trig);
+
+(
+make: { |name|
+	BP(name).free;
+	PR(\viztrig).chuck(BP(name), nil, (
+		model: ml,
+		userprep: {
+			~voicer = VC(\tmel).v;  // avoid some dispatches in updateModLev
+		},
+		// userfree: { ~modlevUpdater.remove },
+		updateSynths: {
+			var angleLow = ~model.normmag.linlin(0, 0.6, 0.1, 1.5pi);
+			~voicer.set([mod_lev: ~model.centroid.y.linexp(-1, 1, 9.0, 0.8)]);
+			if(BP(\tp)[\rotSynth].notNil) {
+				BP(\tp)[\rotSynth].set(\angleLow, angleLow, \angleHi, angleLow + 0.5);
+			};
+		},
+		segThresh: 0.5,
+		reqdPoints: 5,
+		segReqd: 4,
+		nextSegCondition: {
+			~model.points.count { |pt| pt.mag.last > ~segThresh } >= ~reqdPoints
+		},
+		trigCount: 3,
+		trigReqd: 3,
+		trigThresh: 0.25,
+		respond: {
+			~updateSynths.();
+			if(BP(\segTrig)[\eventTrigAction].notNil and: { ~model.normmag > ~trigThresh }) {
+				~trigCount = ~trigCount - 1;
+				if(~trigCount == 0) {
+					BP(\segTrig).eventTrigAction;
+				};
+			} {
+				~trigCount = ~segReqd;
+			};
+		},
+	));
+}, type: \bp) => Fact(\t2050trig);

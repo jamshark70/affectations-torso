@@ -397,6 +397,7 @@
 			\chuckIf.eval(PR(\tposes), BP, \tp);
 			VC(\tmel) => BP(\tp);
 			0 => BP(\tp);
+			BP(\t2050trig).free;
 		},
 		unloadProcesses: { BP(\tp).free },
 		seqPattern: {
@@ -408,6 +409,22 @@
 							Env([VC(\tmel).v.globalControls[\finalAmp].value, 0.001], #[8], -1.7)
 						);
 						BP(\fastnotes).rotSynthDef = BP(\fastnotes).originalRotSynthDef;
+
+						if(topEnvironment[\useVideo]) {
+							Fact(\t2050trig) => BP(\t2050trig);
+						};
+
+						if(BP(\tp)[\originalChangingDelta].isNil) {
+							BP(\tp).originalChangingDelta = BP(\tp).changingDelta;
+						};
+
+						BP(\tp).changingDelta = Pseq([
+							12,
+							Pwhite(1.0, 3.0, { rrand(3, 6) }),
+							// Pwhite(6.0, 10.0, 1)
+						], 1);
+						BP(\tp).repeats = 1;
+						BP(\tp).resetAllSources = true;
 						0
 					},
 					// for slow notes
@@ -430,9 +447,24 @@
 						bp.controlsVCPos = true;
 						bp.reset;
 						bp.v.reset;  // it seems this func sometimes doesn't get called
-					})
+					}),
+					\cmdSync,
+					loopCmd: (
+						cmds: [
+							funcCmd: topEnvironment[\trigParms],
+							\cmdSync,
+							{ BP(\tp).resetAllSources = false; 0 },
+							bpCmd: (name: \tp, prepareBP: { |bp|
+								bp.changingDelta = Pseq([
+									Pwhite(1.0, 3.0, { rrand(3, 6) }),
+									Pwhite(6.0, 10.0, 1)
+								], 1);
+							}),
+							\cmdSync
+						]
+					)
 				],
-				// onStop: {},
+				onStop: { BP(\t2050trig).free },
 				dur: \trigger,  // or \sync
 				id: 2060,  // trig id
 				init: Func(\nextThingTrig).v,
