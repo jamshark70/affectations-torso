@@ -505,7 +505,7 @@
 						], inf) * BP(\t2060trig).stretchCtl;
 						bp.delta = bp.changingDelta;
 						bp.rotSynthDef = bp.originalRotSynthDef;
-						bp.finalAmp = 0.6; // originally 0.16
+						bp.finalAmp = Env(#[0.8, 0.6], #[15]);  // originally 0.16
 						VC(bp.vcKey).env.modfx.set(\distFar, 20);
 
 
@@ -688,6 +688,7 @@
 					),
 					// should stop after 1 event
 					bpCmd: (name: \tp, dur: 10, prepareBP: { |bp|
+						bp.changingDelta = Pn(12, 1);
 						bp.resetAllSources = true;
 						bp.controlsVCPos = false;
 						bp.reset;

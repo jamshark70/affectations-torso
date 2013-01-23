@@ -1,4 +1,4 @@
-* Sections: use of motion [9/12]
+* Sections: use of motion [10/12]
 ** DONE T2000-low tones
 *** Vertical motion in left or right two columns
 *** Need: threshold? Or trigger envelope by y-velocity?
@@ -26,15 +26,16 @@
 *** Raise arm
 *** New note for motion -- tough, want to keep movement slow
 *** Pipe some motion control into rotSynth
-** INPROG T2060-Fast ensemble
+** DONE T2060-Fast ensemble
 *** Suddenly move fast
-*** TODO NEEDS TO BE MUCH LOUDER
+*** DONE NEEDS TO BE MUCH LOUDER
 ** DONE T2070-Slow down
-*** Track speed; when it goes consistently below a threshold, go into this section?
+*** Move centroid into lowest third
 ** DONE T2080-Ilana up
 *** Raise arm
-*** TODO Sweep up should play 1 note
-*** TODO mod_lev is wrong
+*** DONE Sweep up should play 1 note
+*** DONE mod_lev is wrong
 ** INPROG T2090-Ilana solo
+*** Little bit too sensitive
 *** Stop? How to measure that? (Overall magnitude drops I guess)
 ** TODO T2100-Duet

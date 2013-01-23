@@ -433,5 +433,12 @@ make: { |name|
 		nextSegCondition: {
 			~model.normmag < ~nextSegThresh
 		},
+		voicer: VC(\tmel).v,  // cheat
+		superRespond: PR(\t2010trig)[\respond],
+		respond: {
+			// need to continue control of VC(\tmel)'s mod_lev control
+			~voicer.set([mod_lev: ~model.centroid.y.linexp(-1, 1, 15.0, 0.8) * ~model.normmag.linexp(0, 1, 3, 1)]);
+			~superRespond.();
+		}
 	));
 }, type: \bp) => Fact(\t2080trig);
