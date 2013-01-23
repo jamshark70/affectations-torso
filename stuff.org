@@ -33,6 +33,8 @@
 *** Track speed; when it goes consistently below a threshold, go into this section?
 ** DONE T2080-Ilana up
 *** Raise arm
+*** TODO Sweep up should play 1 note
+*** TODO mod_lev is wrong
 ** INPROG T2090-Ilana solo
 *** Stop? How to measure that? (Overall magnitude drops I guess)
 ** TODO T2100-Duet
