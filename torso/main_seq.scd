@@ -54,7 +54,7 @@ s.waitForBoot {
 			~sbounds = Window.screenBounds;
 			~window = Window("triggers", Rect(~sbounds.right - 120, ~sbounds.height - 150, 120, 110));
 			~eventBtn = Button(~window, Rect(2, 2, 116, 51))
-				.states_([["event"]])
+				.states_([["event"], ["event", Color.black, Color(1, 0.7, 0.7)]])
 				.enabled_(false)
 				.action_(e { |view|
 					~eventTrigAction.();
@@ -113,7 +113,10 @@ s.waitForBoot {
 			} {
 				~eventTrigsWaiting[eventID] = nil
 			};
-			(e { ~eventBtn.enabled = ~eventTrigsWaiting.notEmpty }).defer;
+			(e {
+				~eventBtn.enabled = ~eventTrigsWaiting.notEmpty;
+				~eventBtn.value = ~eventTrigsWaiting.notEmpty.binaryValue;
+			}).defer;
 		},
 		eventTrigAction: {
 			// no id given through GUI: fire earliest (lowest ID) event
