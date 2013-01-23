@@ -768,7 +768,7 @@ free: {
 			customize: { |v|
 				// ~target.newPostSend(~cRvbMc, 1.2);
 				v.mapGlobal(\mod_ratio, nil, 3, #[1, 10, \exp]);
-				v.mapGlobal(\mod_lev, nil, 1.6, #[0.01, 15, \exp]);
+				v.mapGlobal(\mod_lev, nil, 1.6, #[0.1, 50, \exp]);
 				// v.mapGlobal(\distance, nil, 10, #[5, 20]);
 				// v.mapGlobal(\pan, nil, 0, \bipolar);
 			}

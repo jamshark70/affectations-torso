@@ -476,12 +476,14 @@
 	PR(\tlsAff).copy.putAll((
 		name: "T2060-Fast ensemble",
 		segID: 2060,
-		// initProcesses: {},
+		initProcesses: { BP(\t2060trig).free },
 		// unloadProcesses: {},
 		seqPattern: {
 			Pn((
 				sequence: [
 					{	var bp = BP(\fastnotes);
+
+						Fact(\t2060trig) => BP(\t2060trig);
 
 						// NOW DAMMIT DON'T GET CONFUSED ABOUT THIS AGAIN
 						// THIS PART IS FOR FASTNOTES
@@ -500,7 +502,7 @@
 								var	curve = Env([rrand(0.06, 0.09), rrand(0.18, 0.35)], #[1], 5).asArray;
 								Pseries.fromEndpoints(0.0, 1.0, rrand(8, 14)).collect { |x| curve.envAt(x) }
 							})
-						], inf);
+						], inf) * BP(\t2060trig).stretchCtl;
 						bp.delta = bp.changingDelta;
 						bp.rotSynthDef = bp.originalRotSynthDef;
 						bp.finalAmp = 0.6; // originally 0.16
@@ -520,7 +522,7 @@
 								var	curve = Env([rrand(0.06, 0.09), rrand(0.18, 0.35)], #[1], 5).asArray;
 								Pseries.fromEndpoints(0.0, 1.0, rrand(8, 14)).collect { |x| curve.envAt(x) }
 							})
-						], inf) * Env(#[4, 1], #[8], -2);
+						], inf) * Env(#[4, 1], #[8], -2) * BP(\t2060trig).stretchCtl;
 
 						bp.sustain = max(0.08, Pkey(\delta) * Pwhite(0.25, 0.6, inf));
 
@@ -550,6 +552,8 @@
 										}
 									),
 									dur * rrand(0.45, 0.65)
+									// funcCmd: topEnvironment[\trigParms],
+									// \cmdSync
 								], autoSync: false)
 							},
 							\sync,
@@ -563,13 +567,15 @@
 										}
 									),
 									dur * rrand(0.45, 0.65)
+									// funcCmd: topEnvironment[\trigParms],
+									// \cmdSync
 								], autoSync: false)
 							},
 							\sync
 						]
 					)
 				],
-				onStop: {},
+				onStop: { BP(\t2060trig).free },
 				dur: \trigger,  // or \sync
 				id: 2070,  // trig id
 				init: Func(\nextThingTrig).v,
@@ -581,12 +587,14 @@
 	PR(\tlsAff).copy.putAll((
 		name: "T2070-Slow down",
 		segID: 2070,
-		// initProcesses: {},
+		initProcesses: { BP(\t2070trig).free },
 		// unloadProcesses: {},
 		seqPattern: {
 			Pn((
 				sequence: [
 					{	var	p = BP(\fastnotes);
+						\makeT2070trig.eval;
+
 						p.stop(0);
 						p.slowFactor = Env(#[1, 6], #[16], \exp).asStream;
 						p.changingDelta = Pwrand([
@@ -597,7 +605,7 @@
 								(Pseries.fromEndpoints(0.0, 1.0, rrand(8, 14)) * p.slowFactor).collect { |x| curve.envAt(x) }
 							}),
 							Pstutter(2, Pwhite(0.125, 0.18, 1))   // NOT slowed!
-						], #[0.2, 0.2, 0.2, 0.4], inf);
+						], #[0.2, 0.2, 0.2, 0.4], inf) * BP(\t2070trig).stretchCtl;
 						p.delta = p.changingDelta;
 
 						p.sustain = Pkey(\delta) * Pif(Pkey(\delta) > 0.18, Pwhite(0.9, 1.2, inf), 0.5);
@@ -638,14 +646,14 @@
 					{ rrand(8.0, 14.0) },
 					bpCmd: (name: \thr, shouldSync: false, prepareBP: { |bp|
 						bp.sustain = Pwhite(8.0, 15.0, inf);
-						bp.delta = Pwhite(7.0, 14.0, inf);
+						bp.delta = Pwhite(7.0, 14.0, inf) * BP(\t2070trig).stretchCtl;
 						bp.throwfLow = Pexprand(100, 170, inf);
 						bp.throwfHi = Pkey(\fLow);
 						bp.throwampenv = [Env.perc(0.01, 0.99, 0.4).asArray];
 						bp.amp = 14.dbamp;
 					}),
 				],
-				// onStop: {},
+				onStop: { BP(\t2070trig).free },
 				dur: \trigger,  // or \sync
 				id: 2080,  // trig id
 				init: Func(\nextThingTrig).v,
@@ -657,11 +665,15 @@
 	PR(\tlsAff).copy.putAll((
 		name: "T2080-Ilana up",
 		segID: 2080,
-		// initProcesses: {},
+		initProcesses: { BP(\t2080trig).free },
 		// unloadProcesses: {},
 		seqPattern: {
 			Pn((
 				sequence: [
+					{
+						Fact(\t2080trig) => BP(\t2080trig);
+						0
+					},
 					[	6.0,
 						{ BP(#[fastnotes, thr]).stop(0); 0 }
 					],
@@ -676,6 +688,7 @@
 					),
 					// should stop after 1 event
 					bpCmd: (name: \tp, dur: 10, prepareBP: { |bp|
+						bp.resetAllSources = true;
 						bp.controlsVCPos = false;
 						bp.reset;
 						bp.v.reset;
@@ -683,7 +696,7 @@
 					8.0,
 					bpCmd: (name: \ssd2, shouldSync: false)
 				],
-				// onStop: {},
+				onStop: { BP(\t2080trig).free },
 				dur: \trigger,  // or \sync
 				id: 2090,  // trig id
 				init: Func(\nextThingTrig).v,

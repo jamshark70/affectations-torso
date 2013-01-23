@@ -348,7 +348,7 @@ make: { |name|
 				BP(\tp)[\rotSynth].set(\angleLow, angleLow, \angleHi, angleLow + 0.5);
 			};
 		},
-		segThresh: 0.5,
+		segThresh: 0.55,
 		reqdPoints: 5,
 		segReqd: 4,
 		nextSegCondition: {
@@ -370,3 +370,66 @@ make: { |name|
 		},
 	));
 }, type: \bp) => Fact(\t2050trig);
+
+
+(
+make: { |name|
+	BP(name).free;
+	PR(\viztrig).chuck(BP(name), nil, (
+		model: ml,
+		userprep: {
+			~stretchCtl = GenericGlobalControl((~collIndex ++ "Stretch").asSymbol, nil, 1, #[0.1, 10, \exp]);
+			~voicer = VC(\tmel).v;  // avoid some dispatches in updateModLev
+		},
+		userfree: {
+			var ctl = ~stretchCtl;
+			{ ctl.free }.defer(3);  // seg 2060's processes might break if ctl is freed too soon
+		},
+		segReqd: 5,
+		// segRange is inherited
+		nextSectionThresh: 0.33,
+		nextSegCondition: {
+			~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y > ~nextSectionThresh }
+		},
+		// trigCount: 3,
+		// trigReqd: 3,
+		// trigThresh: 0.25,
+		respond: {
+			~stretchCtl.set(~model.normmag.linexp(0, 1, 4.8, 0.5));
+			~voicer.set([mod_lev: ~model.centroid.y.linexp(-1, 1, 15.0, 0.8) * ~model.normmag.linexp(0, 1, 3, 1)]);
+			// if(BP(\segTrig)[\eventTrigAction].notNil and: { ~model.normmag > ~trigThresh }) {
+			// 	~trigCount = ~trigCount - 1;
+			// 	if(~trigCount == 0) {
+			// 		BP(\segTrig).eventTrigAction;
+			// 	};
+			// } {
+			// 	~trigCount = ~segReqd;
+			// };
+		}
+	));
+}, type: \bp) => Fact(\t2060trig);
+
+
+{
+	Fact(\t2060trig) => BP(\t2070trig);
+	BP(\t2070trig).nextSegCondition = {
+		~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y < ~nextSectionThresh }
+	};
+	BP(\t2070trig).nextSectionThresh = -0.33;
+	BP(\t2070trig)
+} => Func(\makeT2070trig);
+
+
+(
+make: { |name|
+	BP(name).free;
+	PR(\t2010trig).chuck(BP(name), nil, (
+		model: ml,
+		soloproc: \ssd2,
+		panMulAdd: #[-1, 0],
+		nextSegThresh: 0.05,
+		nextSegCondition: {
+			~model.normmag < ~nextSegThresh
+		},
+	));
+}, type: \bp) => Fact(\t2080trig);

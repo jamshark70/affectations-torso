@@ -136,11 +136,11 @@ BP(\t2050trig).reqdPoints = 4;
 
 
 BP(\t2050trig).updateSynths = {
-			~voicer.set([mod_lev: ~model.centroid.y.linexp(-1, 1, 9.0, 0.8)]);
-			if(BP(\tp)[\rotSynth].notNil) {
-				BP(\tp)[\rotSynth].set(\angleRate, ~model.normmag.linlin(0, 0.6, 0.5, 7.0));
-			};
-		};
+	~voicer.set([mod_lev: ~model.centroid.y.linexp(-1, 1, 9.0, 0.8)]);
+	if(BP(\tp)[\rotSynth].notNil) {
+		BP(\tp)[\rotSynth].set(\angleRate, ~model.normmag.linlin(0, 0.6, 0.5, 7.0));
+	};
+};
 
 BP(\tp).rotSynth.get(\angleRate, { |d| d.debug("\tgot") });
 
@@ -159,3 +159,23 @@ BP(\t2050trig).respond = {
 		~trigCount = ~segReqd;
 	};
 },
+
+
+
+BP(\t2060trig).respond = {
+	~stretchCtl.set(~model.normmag.linexp(0, 1, 4.8, 0.5));
+	~voicer.set([mod_lev: ~model.centroid.y.linexp(-1, 1, 15.0, 0.8) * ~model.normmag.linexp(0, 1, 3, 1)]);
+	if(BP(\segTrig)[\eventTrigAction].notNil and: { ~model.normmag > ~trigThresh }) {
+		~trigCount = ~trigCount - 1;
+		if(~trigCount == 0) {
+			BP(\segTrig).eventTrigAction;
+		};
+	} {
+		~trigCount = ~segReqd;
+	};
+};
+
+VC.keys.detect { |vc| VC(vc).v === BP(\fastnotes).event.voicer };
+
+VC(\tmel).globalControls[\mod_lev].spec
+VC(\tmel).globalControls[\mod_lev].spec = ControlSpec(0.1, 50, \exp);
