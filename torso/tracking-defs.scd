@@ -7,6 +7,7 @@ var ml = Library.at(\motionListener), mg = Library.at(\motionGui);
 
 Proto({
 	~listenKey = \allPtsReceived;
+	~waitBeforeAdvance = 5;  // no section should be shorter than 5 seconds
 
 	~segReqd = 6;  // reqd for transition to next section
 	~segTrigCount = 0;
@@ -14,6 +15,7 @@ Proto({
 	~nextSectionThresh = -0.3;
 
 	~prep = {
+		~canAdvanceTime = SystemClock.beats + ~waitBeforeAdvance;
 		~resetSegCheck.();
 
 		~makeListener.();
@@ -34,7 +36,7 @@ Proto({
 		~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y < ~nextSectionThresh }
 	};
 	~nextSegCheck = { |obj, what, moreArgs|
-		if(~nextSegCondition.()) {
+		if(SystemClock.beats > ~canAdvanceTime and: { ~nextSegCondition.() }) {
 			~segTrigCount = ~segTrigCount - 1;
 			if(~segTrigCount == 0) { \goAhead } { \notYet }
 		} {
