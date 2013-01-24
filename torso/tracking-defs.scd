@@ -429,7 +429,7 @@ make: { |name|
 		model: ml,
 		soloproc: \ssd2,
 		panMulAdd: #[-1, 0],
-		nextSegThresh: 0.05,
+		nextSegThresh: 0.02,
 		nextSegCondition: {
 			~model.normmag < ~nextSegThresh
 		},
@@ -442,3 +442,55 @@ make: { |name|
 		}
 	));
 }, type: \bp) => Fact(\t2080trig);
+
+
+(
+make: { |name|
+	BP(name).free;
+	PR(\viztrig).chuck(BP(name), nil, (
+		model: ml,
+		userprep: {
+			~testCtl = GenericGlobalControl((~collIndex ++ "TestMag").asSymbol, nil, 0);
+		},
+		userfree: { ~testCtl.free },
+		useGui: { |vpi| ~testCtl => VP(vpi) },
+		schmidtUp: 0.4,
+		upRatio: 0.9,
+		schmidtDown: 0.22,
+		downRatio: 0.05,
+		magNow: 0,
+		schmidtActive: false,
+		respond: {
+			var mag = ~model.normmag;
+			BP(\bel).panCtl.set(~model.centroid.x);
+			if(mag > ~magNow) { mag = ~magNow.blend(mag, ~upRatio) }
+			{ mag = ~magNow.blend(mag, ~downRatio) };
+			~testCtl.set(mag);
+			if(~magNow < ~schmidtUp and: { mag >= ~schmidtUp }) {
+				if(~schmidtActive.not and: { BP(\segTrig)[\eventTrigAction].notNil }) {
+					BP(\segTrig).eventTrigAction;
+					~schmidtActive = true;
+				};
+			} {
+				if(~magNow > ~schmidtDown and: { mag <= ~schmidtDown }) {
+					~schmidtActive = false;
+				};
+			};
+			~magNow = mag;
+		},
+		nextSegCondition: {
+			~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y > ~nextSectionThresh }
+		},
+		nextSectionThresh: 0.33
+	));
+}, type: \bp) => Fact(\t2090trig);
+
+
+(
+make: { |name|
+	BP(name).free;
+	PR(\viztrig).chuck(BP(name), nil, (
+		model: ml,
+
+	));
+}, type: \bp) => Fact(\t2100trig);

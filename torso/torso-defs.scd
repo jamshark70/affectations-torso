@@ -463,11 +463,13 @@ make: { |name|
 			~event.proto = topEnvironment[\rvbEvent].proto.copy
 				.put(\glrvbout, ~glrvbmc.inbus);
 			~event.put(\glrvbamt, 0.395).put(\lcrvbamt, 0.232);
+			~panCtl = GenericGlobalControl((~collIndex ++ "Pan").asSymbol, nil, 0, \bipolar);
 		},
 		userfree: {
 			#[glrvbmc, lcrvbmc].do { |key|
 				key.envirGet.tryPerform(\stopsReceivingFrom, ~chan);
 			};
+			~panCtl.free;
 		},
 		continue: true,
 		preparePlay: { ~continue = true },
@@ -520,9 +522,14 @@ make: { |name|
 					beaterFilt: Pexprand(1500, 5000, inf),
 					atten: 0.025,
 					distance: Pwhite(9.0, 20.0, inf),
-					pan: Pif(Pkey(\fLow) >= 120, Pwhite(-1.0, 1.0, inf), 0),
+					// ~panCtl.asPattern "freezes" pan at its position when the note hits
+					// that's what I want; don't change this to ~panCtl.asMap later
+					pan: Pif(Pkey(\fLow) >= 120, ~panCtl.asPattern, 0),
 					panWidth: 1,
-					chfreq: Pwhite(0.3, 0.8, inf)
+					chfreq: Pwhite(0.3, 0.8, inf),
+					// a long delta signals a low bell frequency (above),
+					// but I don't want it to delay the event trigger for the next phrase too long
+					delta: Pif(Pkey(\delta) >= 10.0, 2.5, Pkey(\delta))
 				]
 			)
 		) }
@@ -1385,6 +1392,8 @@ make: { |name|
 			)
 		) },
 		preparePlay: {
+			Environment.current.dumpBackTrace;
+			"^^ DEBUG TRACE BP(\\td).preparePlay".debug;
 			if(BP.exists(~trajectoryKey)
 				and: { BP(~trajectoryKey).clients.includes(~collIndex).not }
 			) {

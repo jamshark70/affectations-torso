@@ -38,4 +38,8 @@
 ** INPROG T2090-Ilana solo
 *** Little bit too sensitive
 *** Stop? How to measure that? (Overall magnitude drops I guess)
+*** Move a little to start a bell gesture: Schmidt trigger with decay
+**** MAYBE Visual indicator when Schmidt trigger resets?
 ** TODO T2100-Duet
+*** Control chord dynamics with y and/or x position
+*** Fade out? (Maybe walk away from the machine)

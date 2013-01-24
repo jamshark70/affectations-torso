@@ -117,17 +117,17 @@
 						};
 					}),
 					// [	15,
-						funcCmd: (
-							dur: 15,
-							clearDoneSignal: {
-								var cmd = ~iterator.findActive(\ttonCmd);
-								if(cmd.notNil) { cmd.stop }
-								{ "could not find \\ttonCmd to stop it".warn };
-								BP(\tton).stop(0);
-								BP(\t2000trig).free;
-								// 0
-							}
-						),
+					funcCmd: (
+						dur: 15,
+						clearDoneSignal: {
+							var cmd = ~iterator.findActive(\ttonCmd);
+							if(cmd.notNil) { cmd.stop }
+							{ "could not find \\ttonCmd to stop it".warn };
+							BP(\tton).stop(0);
+							BP(\t2000trig).free;
+							// 0
+						}
+					),
 					// ],
 					loopCmd: (
 						cmds: [
@@ -155,7 +155,7 @@
 				onStop: e {
 					var	cmd;
 					if((cmd = ~savedCmds.detect { |cmd| cmd.tryPerform(\id) == \ttonCmd })
-					.notNil) {
+						.notNil) {
 						cmd.stop;
 					};
 					BP(\tton).stop(0);  // just in case...
@@ -717,6 +717,7 @@
 			\chuckIf.eval(Fact(\bellfx), BP, \belfx, nil, (
 				parentChan: BP(\bel).chan
 			));
+			BP(\t2090trig).free;
 		},
 		unloadProcesses: { BP(#[bel, belfx]).free },
 		seqPattern: {
@@ -728,29 +729,50 @@
 					{	var bp = BP(\bel);
 						bp.delta = Pwhite(12.0, 18.0, inf);
 						bp.prepareForPlay;
+						Fact(\t2090trig) => BP(\t2090trig);
 						0
 					},
 					loopCmd: (
 						repeats: 2,
 						cmds: [
 							{	BP(\bel).triggerOneEvent(0);
-								rrand(11.0, 16.0)
-							}
+								4 // rrand(11.0, 16.0)
+							},
+							funcCmd: topEnvironment[\trigParms]
 						]
 					),
 					\cmdSync,
-					bpCmd: (name: \bel, shouldSync: false, prepareBP: { |bp|
-						bp.delta = Pseq([
+
+					{
+						BP(\bel).delta = Pseq([
 							Plazy({
-								var	last;
-								if(~continue ? true) {
-									last = rrand(0.9, 1.2);
-									Pgeom.fromEndpoints(rrand(1.8, 2.6), last, rrand(4, 9)) ++ Pn(last*0.5, 1)
-								} { nil /*.alwaysYield*/ /*BP(~collIndex).stop(0)*/ };
+								var	last = rrand(0.9, 1.2);
+								Pgeom.fromEndpoints(
+									rrand(1.8, 2.6), last,
+									rrand(4, 9)
+								) ++ Pn(last * 0.5, 1)
 							}),
 							Pwhite(10.0, 16.0, 1)
-						], inf);
-					}),
+						], 1);
+						0
+					},
+					loopCmd: (
+						shouldSync: false,
+						cmds: [
+							{
+								if(BP(\bel).continue ? true) {
+									PR(\bpCmd).copy.putAll((
+										name: \bel, // shouldSync: false,
+										prepareBP: { |bp| bp.makeStreamForKey(\delta) }
+									))
+								} { nil }  // nil should stop the loop
+							},
+							\cmdSync,
+							funcCmd: topEnvironment[\trigParms],
+							\cmdSync
+						],
+					),
+					8,
 					bpCmd: (name: \belfx, shouldSync: false,
 						setDoneSignal: {
 							~doneSignal = Updater(BP(\bel), { |obj, what, more|
@@ -762,7 +784,7 @@
 						clearDoneSignal: { ~doneSignal.remove }
 					)
 				],
-				// onStop: {},
+				onStop: { BP(\t2090trig).free },
 				dur: \trigger,  // or \sync
 				id: 2100,  // trig id
 				init: Func(\nextThingTrig).v,
