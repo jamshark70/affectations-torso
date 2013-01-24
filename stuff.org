@@ -39,7 +39,11 @@
 *** Little bit too sensitive
 *** Stop? How to measure that? (Overall magnitude drops I guess)
 *** Move a little to start a bell gesture: Schmidt trigger with decay
-**** MAYBE Visual indicator when Schmidt trigger resets?
+*** MAYBE Visual indicator when Schmidt trigger resets?
 ** TODO T2100-Duet
 *** Control chord dynamics with y and/or x position
 *** Fade out? (Maybe walk away from the machine)
+* Bugs [2013-01-24 Thu]
+** TODO Wild gesture doesn't always fire
+** TODO T2060 is still way too quiet
+** TODO Final section trigger is very very very sensitive
