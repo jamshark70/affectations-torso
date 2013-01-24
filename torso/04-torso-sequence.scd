@@ -94,7 +94,7 @@
 					),
 					\sync
 				],
-				// onStop: {},
+				onStop: { BP(\t2000trig).free },
 				dur: \trigger,  // or \sync
 				id: 2010,  // trig id
 				init: Func(\nextThingTrig).v,
@@ -159,7 +159,7 @@
 						cmd.stop;
 					};
 					BP(\tton).stop(0);  // just in case...
-					BP(\t2000trig).free;
+					// BP(\t2000trig).free;
 				},
 				dur: \trigger,  // or \sync
 				id: 2020,  // trig id
@@ -213,6 +213,8 @@
 					bpCmd: (name: \ssd, shouldSync: false, playWarning: false),
 					bpCmd: (name: \ssd2, shouldSync: false, prepareBP: {
 						if(topEnvironment[\useVideo]) {
+							// t2010 may not advance to next segment: that's t2020's job now
+							BP(\t2010trig).nextSegCheck = \respond;
 							Fact(\t2020trig) => BP(\t2020trig);
 						};
 					}),
