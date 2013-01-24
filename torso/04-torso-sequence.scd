@@ -483,7 +483,9 @@
 				sequence: [
 					{	var bp = BP(\fastnotes);
 
-						Fact(\t2060trig) => BP(\t2060trig);
+						if(topEnvironment[\useVideo]) {
+							Fact(\t2060trig) => BP(\t2060trig);
+						};
 
 						// NOW DAMMIT DON'T GET CONFUSED ABOUT THIS AGAIN
 						// THIS PART IS FOR FASTNOTES
@@ -593,7 +595,7 @@
 			Pn((
 				sequence: [
 					{	var	p = BP(\fastnotes);
-						\makeT2070trig.eval;
+						if(topEnvironment[\useVideo]) { \makeT2070trig.eval };
 
 						p.stop(0);
 						p.slowFactor = Env(#[1, 6], #[16], \exp).asStream;
@@ -671,7 +673,9 @@
 			Pn((
 				sequence: [
 					{
-						Fact(\t2080trig) => BP(\t2080trig);
+						if(topEnvironment[\useVideo]) {
+							Fact(\t2080trig) => BP(\t2080trig);
+						};
 						0
 					},
 					[	6.0,
@@ -729,7 +733,9 @@
 					{	var bp = BP(\bel);
 						bp.delta = Pwhite(12.0, 18.0, inf);
 						bp.prepareForPlay;
-						Fact(\t2090trig) => BP(\t2090trig);
+						if(topEnvironment[\useVideo]) {
+							Fact(\t2090trig) => BP(\t2090trig);
+						};
 						0
 					},
 					loopCmd: (
