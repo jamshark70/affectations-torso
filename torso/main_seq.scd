@@ -218,13 +218,9 @@ s.waitForBoot {
 
 
 // DEBUG SNIPS
-
 ChuckableBrowser.newWindow;
-
 MT(1).gui;
-
 BP.all.stop;
-
 d = DDWTimer.new;
 
 
