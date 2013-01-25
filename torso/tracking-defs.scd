@@ -124,9 +124,10 @@ PR(\viztrig).clone({
 	~panMulAdd = #[1, 0];
 	~keep = 5;
 	~filterMagThresh = 0.6;
-	~wildThresh = 0.8;
+	~wildThresh = 0.74;
 	~magThresh = 0.7;
-	~wildDuration = 4;
+	~wildPts = 5;
+	~wildDuration = 3;
 	~lastWildTime = 0;
 	~ffreqIsOverridden = false;
 	~wildGestureRunning = false;
@@ -144,6 +145,8 @@ PR(\viztrig).clone({
 			switch(what)
 			{ \wildGestureEnded } {
 				~wildGestureRunning = false;
+				// guarantee minimum time between wild gestures
+				~lastWildTime = SystemClock.beats;
 				what.debug;
 			}
 			{ \node } {
@@ -185,14 +188,16 @@ PR(\viztrig).clone({
 		~panLag.set(\pan, ~model.centroid.x);
 
 		case
-		{
-			count = ~model.points.count { |pt| pt.mag.last > ~wildThresh };
-			~model.normmag > ~magThresh and: {
-				count >= 5 and: { (thisThread.beats - ~lastWildTime) > ~wildDuration }
+		{	// condition
+			~wildGestureRunning.not and: {
+				count = ~model.points.count { |pt| pt.mag.last > ~wildThresh };
+				~model.normmag > ~magThresh and: {
+					count >= ~wildPts and: { (SystemClock.beats - ~lastWildTime) > ~wildDuration }
+				}
 			}
-		} {
+		} {	// action
 			[~model.normmag, count].debug("BP(%): wild process triggered".format(~soloproc.asCompileString));
-			~lastWildTime = thisThread.beats;
+			~lastWildTime = SystemClock.beats;
 			~wildFire.();
 		}
 		{ ~ffreqIsOverridden.not and: { ~wildGestureRunning.not and: { ~model.normmag >= ~filterMagThresh } } } {
