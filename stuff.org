@@ -43,7 +43,9 @@
 ** TODO T2100-Duet
 *** Control chord dynamics with y and/or x position
 *** Fade out? (Maybe walk away from the machine)
+* *Lighting matters* - everything is more sensitive when it's bright
 * Bugs [2013-01-24 Thu]
-** TODO Wild gesture doesn't always fire
+** DONE Wild gesture doesn't always fire
 ** TODO T2060 is still way too quiet
+** TODO T2060 was hard to trigger
 ** TODO Final section trigger is very very very sensitive

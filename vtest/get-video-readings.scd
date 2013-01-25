@@ -183,3 +183,6 @@ VC(\tmel).globalControls[\mod_lev].spec = ControlSpec(0.1, 50, \exp);
 
 BP(\bel).panCtl =>.3 VP(4);
 BP(\t2090trig).testCtl =>.2 VP(4);
+
+
+BP(\bel).debug = true;
