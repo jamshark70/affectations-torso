@@ -15,7 +15,7 @@ Proto({
 	~nextSectionThresh = -0.3;
 
 	~prep = {
-		~canAdvanceTime = SystemClock.beats + ~waitBeforeAdvance;
+		~canAdvanceTime = (SystemClock.beats + ~waitBeforeAdvance); //.debug("set canAdvanceTime");
 		~resetSegCheck.();
 
 		~makeListener.();
@@ -36,6 +36,7 @@ Proto({
 		~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y < ~nextSectionThresh }
 	};
 	~nextSegCheck = { |obj, what, moreArgs|
+		// [SystemClock.beats, ~canAdvanceTime].debug("nextSegCheck");
 		if(SystemClock.beats > ~canAdvanceTime and: { ~nextSegCondition.() }) {
 			~segTrigCount = ~segTrigCount - 1;
 			if(~segTrigCount == 0) { \goAhead } { \notYet }
@@ -71,6 +72,7 @@ make: { |name|
 		~keep = 10;
 		~reqd = 5;
 		~checkX = 3;
+		~yThresh = 0.33;
 		~leftThresh = -0.55;
 		~rightThresh = 0.55;
 		~sign = 0;
@@ -84,7 +86,7 @@ make: { |name|
 			~i = (~i + 1) % ~keep;
 
 			if(
-				~countAtLeast.(~last, { |pt| pt.y >= 0.5 }, ~reqd) and: {
+				~countAtLeast.(~last, { |pt| pt.y >= ~yThresh }, ~reqd) and: {
 					mean = ~last.wrapAt((~i - ~checkX .. ~i - 1)).mean(_.x);
 					(mean.inclusivelyBetween(~leftThresh, ~rightThresh).not)
 					and: { (mean.sign != ~sign) }
