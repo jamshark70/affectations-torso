@@ -12,7 +12,7 @@ var	mypath = thisProcess.nowExecutingPath, indices, motionListener, motionGui;
 }, postOutput: true);  // postOutput is required to avoid "broken pipe"
 
 l = HrVideoListener(3, 3);
-g = HrVideoAngleGui(l, pdAddr: NetAddr("127.0.0.1", 57122));
+motionGui = g = HrVideoAngleGui(l, pdAddr: NetAddr("127.0.0.1", 57122));
 
 ShutDown.add { motionGui.pdAddr.sendMsg('/quitPd') };
 )
@@ -186,3 +186,48 @@ BP(\t2090trig).testCtl =>.2 VP(4);
 
 
 BP(\bel).debug = true;
+
+
+// walk away from machine
+// centroid within all 3 at side will move inside --> outside
+
+l.points[1].dump
+
+u.put(\allPtsReceived, { c.set(l.points[1].x.last / l.points[1].plotsize.x) });
+
+atan2(0, -1)
+
+z = l.points[1].plotsize.x * 0.06;
+
+u.put(\allPtsReceived, {
+	if(#[3, 4, 5, 6, 7, 8].every { |i| l.points[i].mag.last < 0.012 } and: {
+		l.points[1].radius >= z and: { l.points[1].angle.inclusivelyBetween(0.8pi, 1.2pi) }
+	}) {
+		"\n\nAlmost exited".postln;
+		(degree: (0..7).scramble.keep(4), sustain: 2).play;
+	};
+});
+
+u.put(\allPtsReceived, {
+	l.points[1].angle.postln;
+});
+
+w = UserView(nil, Rect(800, 400, l.points[1].plotsize.x * 3, l.points[1].plotsize.y * 3)).front;
+
+(
+var color = Color.black, pt = l.points[1].plotsize * (0.5 * 3);
+
+w.drawFunc = {
+	var // Point(l.points[1].x.last, l.points[1].y.last),
+	theta = l.points[1].angle;
+	Pen.color_(color)
+	.moveTo(pt)
+	.lineTo(Polar(50, theta).asPoint + pt)
+	.stroke;
+};
+)
+
+w.refresh;
+
+u.put(\allPtsReceived, { defer { w.refresh } });
+u.put(\allPtsReceived, nil);

@@ -816,23 +816,46 @@
 			\chuckIf.eval(Fact(\armsmelVC), VC, \am, nil, Library.at(\rvbs));
 			\chuckIf.eval(Fact(\duetMelBP), BP, \duetm);
 			VC(\tmel) => BP(\duetm);
+
+			BP(\t2100trig).free;
 		},
 		unloadProcesses: { VC(\wp).free; BP(#[wch, wfx]).free },
 		seqPattern: {
 			Pn((
 				sequence: [
-					{ BP(\bel).continue = false; 0 },
+					{
+						BP(\bel).continue = false;
+						Fact(\t2100trig) => BP(\t2100trig);
+						0
+					},
 					bpCmd: (name: \wch, prepareBP: { |bp|
 						bp.child.argPairs = [fenv_tscale: Pkey(\length)];
 						bp.reset;
 					}),
 					30,
 					bpCmd: (name: \wfx),
-					bpCmd: (name: \duetm)
+					bpCmd: (name: \duetm),
+
+					funcCmd: topEnvironment[\trigParms],
+					\cmdSync,
+
+					// {
+					// 	// later: find wch loopCmd and change so that wch plays on its own power
+					// 	0
+					// },
+					mixerAutoSynthCmd: (
+						name: \ctlPoint, outName: \outbus,
+						value: 0, time: 30, curve: -2
+					),
+					\cmdSync,
+					{
+						BP.all.stop;  // is this safe?
+						0
+					}
 				],
-				// onStop: {},
+				onStop: { BP(\t2100trig).free },
 				dur: \trigger,  // or \sync
-				id: 2500,  // trig id
+				id: 2110,  // trig id
 				init: Func(\nextThingTrig).v,
 				clear: Func(\clearNextTrig).v
 			), 1)

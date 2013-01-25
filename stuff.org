@@ -1,4 +1,4 @@
-* Sections: use of motion [10/12]
+* Sections: use of motion [11/12]
 ** DONE T2000-low tones
 *** Vertical motion in left or right two columns
 *** Need: threshold? Or trigger envelope by y-velocity?
@@ -35,17 +35,21 @@
 *** Raise arm
 *** DONE Sweep up should play 1 note
 *** DONE mod_lev is wrong
-** INPROG T2090-Ilana solo
+** DONE T2090-Ilana solo
 *** Little bit too sensitive
 *** Stop? How to measure that? (Overall magnitude drops I guess)
 *** Move a little to start a bell gesture: Schmidt trigger with decay
-*** MAYBE Visual indicator when Schmidt trigger resets?
+*** POSTPONED Visual indicator when Schmidt trigger resets?
 ** TODO T2100-Duet
 *** Control chord dynamics with y and/or x position
-*** Fade out? (Maybe walk away from the machine)
+*** Trigger chord: Stay below a point for awhile, then rise for awhile
+*** INPROG Fade out? (Maybe walk away from the machine)
+**** TODO Reset master level when resuming play
+**** TODO Event trigger fired but the mixer GUI didn't change ???
 * *Lighting matters* - everything is more sensitive when it's bright
 * Bugs [2013-01-24 Thu]
 ** DONE Wild gesture doesn't always fire
 ** TODO T2060 is still way too quiet
 ** TODO T2060 was hard to trigger
 ** TODO Final section trigger is very very very sensitive
+** TODO Did I actually hear bellfx?

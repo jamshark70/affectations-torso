@@ -498,6 +498,19 @@ make: { |name|
 	BP(name).free;
 	PR(\viztrig).chuck(BP(name), nil, (
 		model: ml,
-
+		nextSegCondition: false,
+		radiusThresh: ml.points[1].plotsize.x * 0.06,
+		magThresh: 0.012,
+		respond: {
+			if(BP(\segTrig)[\eventTrigAction].notNil and: {
+				#[3, 4, 5, 6, 7, 8].every { |i| ~model.points[i].mag.last < ~magThresh } and: {
+					~model.points[1].radius >= ~radiusThresh and: {
+						~model.points[1].angle.inclusivelyBetween(0.8pi, 1.2pi)
+					}
+				}
+			}) {
+				BP(\segTrig).eventTrigAction;
+			};
+		}
 	));
 }, type: \bp) => Fact(\t2100trig);
