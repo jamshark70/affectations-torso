@@ -157,7 +157,7 @@ if(Library.at(\affectations, \commonLoaded) != true) {
 			currentWeights,
 			index = weightStream.next(inval).windex,
 			totalweight, rnd, runningsum;
-	
+
 			block { |break|
 				~repeats.value(inval).do({ |i|
 					item = ~list.at(index);
@@ -171,7 +171,7 @@ if(Library.at(\affectations, \commonLoaded) != true) {
 						currentWeights = weightStream.next(inval);
 						if(currentWeights.isNil) { break.(inval) };
 					};
-	
+
 					totalweight = 1.0 - currentWeights[index];
 					rnd = totalweight.rand;
 					runningsum = 0;
@@ -1042,9 +1042,13 @@ PR(\sectionSequencer).clone({
 				if(~isRunning.()) {
 					~currentSection = ~nextSectionToPlay ?? { ~currentSection + 1 };
 					~nextSectionToPlay = nil;
-					// ~currentSection.debug("section done, moving to");
-					currentEnvironment.changed(\section, ~currentSection);
-					~clock.value.sched(0, ~sectionRoutine);
+					if(~sections[~currentSection].notNil) {
+						// ~currentSection.debug("section done, moving to");
+						currentEnvironment.changed(\section, ~currentSection);
+						~clock.value.sched(0, ~sectionRoutine);
+					} {
+						~stop.();
+					};
 				};
 			}
 			{ \initNext } {
@@ -1078,49 +1082,6 @@ PR(\sectionSequencer).clone({
 	};
 }) => PR(\affSectSeq);
 
-
-// and, another pathetically stupid bug in my library that I have to fix
-// here to avoid an svn update for Lorne
-
-PR(\mixerAutoSynthCmd).fire = { |parms|
-		~mixer = ~mixer.value;
-		if(~mixer.notNil) {
-			~server = ~mixer.server;
-			~target = ~mixer.fadergroup;
-				// this is really fucking stupid
-				// it's supposed to put all the parms into the environment (~setParms)
-				// but it's missing this one ???
-			~outName ?? { ~outName = parms.tryPerform(\at, \outName) ? \out };
-			~outName.envirPut(~mixer.controls[~controlName].index);
-if(~mixer.controls[~controlName].index == 0) {
-	"Incorrectly automating kr bus 0".debug;
-	currentEnvironment.listVars;
-	~gc.dump;
-};
-			~mixer.stopAuto(~controlName).watch(~controlName);
-			~superFire.(parms);
-			~mixer.autoSynths.put(~controlName, ~node);
-		};
-	};
-
-PR(\gcAutoSynthCmd).fire = { |parms|
-	if(~gc.isFunction) { ~gc = ~gc.value };
-	if(~gc.notNil) {
-		~server = ~gc.server;
-		~target = ~target ?? { ~server.asTarget };
-		// NO, DON'T OVERWRITE THE DAMN OUTNAME IF IT'S SUPPLIED!!!
-		~outName ?? { ~outName = parms.tryPerform(\at, \outName) ? \out };
-		~outName.envirPut(~gc.index);
-if(~gc.index == 0) {
-	"Incorrectly automating kr bus 0".debug;
-	currentEnvironment.listVars;
-	~gc.dump;
-};
-		~gc.stopAuto.watch;	// should replace existing automation
-		~superFire.(parms);
-		~gc.autoSynth = ~node;
-	};
-};
 
 // definition in my Instr lib is wrong; this is easier to transport to others
 Instr([\busfx, \chorus2band], { arg bus, numChan, predelay, speed, depth,
