@@ -1392,8 +1392,6 @@ make: { |name|
 			)
 		) },
 		preparePlay: {
-			Environment.current.dumpBackTrace;
-			"^^ DEBUG TRACE BP(\\td).preparePlay".debug;
 			if(BP.exists(~trajectoryKey)
 				and: { BP(~trajectoryKey).clients.includes(~collIndex).not }
 			) {
