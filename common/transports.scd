@@ -56,7 +56,7 @@ Proto({
 			.lineTo(pt3)
 			.lineTo(pt1)
 			.fill;
-	};		
+	};
 	~border = { |rect, thickness, outerColor|
 		GUI.pen.color_(outerColor)
 			.fillRect(Rect(rect.left, rect.top, rect.width, thickness))
@@ -297,7 +297,7 @@ Proto({
 	~refresh = {
 		(e { ~view.tryPerform(\refresh) }).defer;
 	};
-	
+
 	~lightOn = {
 		if(~isLit.not) {
 			~saveBackground = ~background;
@@ -328,7 +328,7 @@ Proto({
 		};
 		currentEnvironment
 	};
-	
+
 	~color_ = { |color|
 		if(~isLit) {
 			~saveColor = color;		// if flashing, refresh will be coming soon
@@ -376,7 +376,7 @@ Proto({
 Proto({
 	~countOffBeats = 4;
 //	~drumTempo = 108;
-	
+
 //	~bigButtonSize = 293;
 	~smallButtonSize = 95;
 	~menuHeight = 40;
@@ -389,7 +389,7 @@ Proto({
 	~countNumberWidth = 240;	// approx golden ratio? why not
 	~maxBeats = 8;
 	~windowHeight = 800;
-	
+
 	~background = Color.clear;
 	~flashBackground = Color.clear;
 	~countNumberBack = Color.new255(255, 253, 196);
@@ -402,7 +402,7 @@ Proto({
 
 //	~background = Color.white;
 //	~flashBackground = Color.white;
-	
+
 	~prep = {// |model|
 			// 'model' is the sectionSequencer represented by this gui
 //		~model = model;
@@ -410,23 +410,23 @@ Proto({
 			//	play/stop
 			//	advancing to next section
 		~model.addDependant(currentEnvironment);
-		
+
 		~window = ResizeFlowWindow("Control panel", Rect(50, 50, 800, ~windowHeight),
 			scroll: false);
-		
+
 			// split window
 		~leftFlow = FlowView(~window, 300@(~windowHeight - 4));
-		
+
 		~buildTransports.(~leftFlow);
-		
+
 		~refreshSections.();
-		
+
 		~window.recursiveResize.front
 			.onClose_(e { BP(~collIndex).free });
 
 		currentEnvironment
 	};
-	
+
 	~buildTransports = { |parent|
 		var	savedAddr;
 			// * numAcross + (4 * (numAcross-1))
@@ -561,7 +561,7 @@ Proto({
 		StaticText(parent, (~bigButtonSize - 24) @ 20)
 			.string_("Record audio to disk");
 	};
-	
+
 	~refreshSections = {
 		if(~model.notNil) {
 			{	~sectionMenu.items_(~model.sections.collect(_.name))
@@ -574,7 +574,7 @@ Proto({
 			}.defer;
 		};
 	};
-	
+
 	~freeCleanup = {
 		var	file, path, addr;
 		if(Library.at(\vizAddr).isKindOf(NetAddr)) {
@@ -596,7 +596,7 @@ Proto({
 		~window.onClose_(nil).close;
 		~userfree.();
 	};
-	
+
 	~showPlaying = { |bool|
 		defer(e {
 			~playButton.currentState = bool.binaryValue;
@@ -605,16 +605,16 @@ Proto({
 			};
 		});
 	};
-	
+
 	~update = { |obj, what, modifier|	// ... args ?
 		switch(what)
 			{ \play } {
 				~showPlaying.(true);
-				~nextCueText.string_(~sectionMenu.items[~model.currentSection+1] ? "END");
+				defer(e { ~nextCueText.string_(~sectionMenu.items[~model.currentSection+1] ? "END") });
 			}
 			{ \stop } {
 				~showPlaying.(false);
-				~nextCueText.string_("");
+				defer(e { ~nextCueText.string_("") });
 			}
 			{ \section } {
 				defer(e {
