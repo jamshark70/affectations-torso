@@ -844,6 +844,7 @@
 					// 	0
 					// },
 					mixerAutoSynthCmd: (
+						mixer: topEnvironment[\master],
 						name: \ctlPoint, outName: \outbus,
 						value: 0, time: 30, curve: -2
 					),
@@ -854,10 +855,10 @@
 					}
 				],
 				onStop: { BP(\t2100trig).free },
-				dur: \trigger,  // or \sync
-				id: 2110,  // trig id
-				init: Func(\nextThingTrig).v,
-				clear: Func(\clearNextTrig).v
+				dur: \sync  // no trigger for next section; just stop when iterator is done
+				// id: 2110,  // trig id
+				// init: Func(\nextThingTrig).v,
+				// clear: Func(\clearNextTrig).v
 			), 1)
 		}
 	)),
