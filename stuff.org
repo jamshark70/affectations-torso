@@ -45,7 +45,7 @@
 *** Trigger chord: Stay below a point for awhile, then rise for awhile
 *** INPROG Fade out? (Maybe walk away from the machine)
 **** TODO Reset master level when resuming play
-**** TODO Event trigger fired but the mixer GUI didn't change ???
+**** DONE Event trigger fired but the mixer GUI didn't change ???
 * *Lighting matters* - everything is more sensitive when it's bright
 * Bugs [2013-01-24 Thu]
 ** DONE Wild gesture doesn't always fire
@@ -53,3 +53,122 @@
 ** TODO T2060 was hard to trigger
 ** TODO Final section trigger is very very very sensitive
 ** TODO Did I actually hear bellfx?
+* Bugs [2013-01-26 Sat]
+** TODO Why does the duet melody get stuck on B-C#?
+** TODO ERROR: Qt: You can not use this Qt functionality in the current thread. Try scheduling on AppClock instead.
+*** Found 2 un-deferred GUI updates in the control panel. Need to test the fix.
+*** Error dump
+ERROR: Primitive '_QObject_SetProperty' failed.
+Failed.
+RECEIVER:
+Instance of QStaticText {    (0x7d4ecf8, gc=04, fmt=00, flg=00, set=06)
+  instance variables [37]
+    qObject : RawPointer 0x80fc9e0
+    finalizer : instance of Finalizer (0x7f23758, size=2, set=1)
+    virtualSlots : instance of Array (0x63e8f08, size=1, set=2)
+    wasRemoved : false
+    font : instance of QFont (0x7c85688, size=5, set=3)
+    resize : Integer 1
+    alpha : Float 1.000000   00000000 3FF00000
+    decorator : nil
+    layout : nil
+    userCanClose : true
+    deleteOnClose : true
+    action : nil
+    mouseDownAction : nil
+    mouseUpAction : nil
+    mouseEnterAction : nil
+    mouseLeaveAction : nil
+    mouseMoveAction : nil
+    mouseOverAction : nil
+    mouseWheelAction : nil
+    keyDownAction : nil
+    keyUpAction : nil
+    keyModifiersChangedAction : nil
+    keyTyped : nil
+    focusGainedAction : nil
+    focusLostAction : nil
+    dragLabel : nil
+    beginDragAction : nil
+    canReceiveDragHandler : nil
+    receiveDragHandler : nil
+    toFrontAction : nil
+    endFrontAction : nil
+    onClose : instance of Function (0x62a22b8, size=2, set=2)
+    onResize : nil
+    onMove : nil
+    object : nil
+    setBoth : true
+    align : Symbol 'center'
+}
+
+PROTECTED CALL STACK:
+	Meta_MethodError:new	0x3a3dc40
+		arg this = PrimitiveFailedError
+		arg what = Failed.
+		arg receiver = a QStaticText
+	Meta_PrimitiveFailedError:new	0x3a442c0
+		arg this = PrimitiveFailedError
+		arg receiver = a QStaticText
+	Object:primitiveFailed	0x2f3e980
+		arg this = a QStaticText
+	QStaticText:string_	0x3c22c00
+		arg this = a QStaticText
+		arg text = 
+	a FunctionDef	0x486a440
+		sourceCode = "<an open Function>"
+	a FunctionDef	0x486db00
+		sourceCode = "<an open Function>"
+	Function:prTry	0x3d138c0
+		arg this = a Function
+		var result = nil
+		var thread = a Routine
+		var next = nil
+		var wasInProtectedFunc = false
+	
+CALL STACK:
+	MethodError:reportError   0x2e91d68
+		arg this = <instance of PrimitiveFailedError>
+	Nil:handleError   0x68f8ef8
+		arg this = nil
+		arg error = <instance of PrimitiveFailedError>
+	Thread:handleError   0x73bc3e8
+		arg this = <instance of Thread>
+		arg error = <instance of PrimitiveFailedError>
+	Thread:handleError   0x67ff768
+		arg this = <instance of Routine>
+		arg error = <instance of PrimitiveFailedError>
+	Object:throw   0x73c0c38
+		arg this = <instance of PrimitiveFailedError>
+	Function:protect   0x3245f38
+		arg this = <instance of Function>
+		arg handler = <instance of Function>
+		var result = <instance of PrimitiveFailedError>
+	Proto:use   0x7f60581d85a8
+		arg this = <instance of Proto>
+		arg func = <instance of Function>
+		var result = nil
+		var saveEnvir = <instance of Proto>
+	Proto:update   0x6c51598
+		arg this = <instance of Proto>
+		arg args = [*2]
+		var result = nil
+	< FunctionDef in Method Set:do >   0x684c238
+		arg item = <instance of Proto>
+	ArrayedCollection:do   0x690fd68
+		arg this = [*4]
+		arg function = <instance of Function>
+		var i = 1
+	Set:do   0x73c2ef8
+		arg this = <instance of IdentitySet>
+		arg function = <instance of Function>
+		var i = 1
+	Object:changed   0x68510e8
+		arg this = <instance of Proto>
+		arg what = 'stop'
+		arg moreArgs = [*0]
+	< closed FunctionDef >   0x6bf9078
+		arg lastSection = true
+	Routine:prStart   0x6fc67a8
+		arg this = <instance of Routine>
+		arg inval = 1359172601.5591
