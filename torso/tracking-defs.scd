@@ -498,18 +498,57 @@ make: { |name|
 	BP(name).free;
 	PR(\viztrig).chuck(BP(name), nil, (
 		model: ml,
+		chordNumBelow: 6,
+		chordNumAbove: 4,
+		chordThresh: 0.33,
+		userprep: {
+			// chord check needs to match chordNumBelow y points toward bottom of window,
+			// then chordNumAbove points higher
+			// easiest is a routine
+			~chordCheck = Routine {
+				var count;
+				loop {
+					count = 0;
+					// I really don't understand: this should be > and the next, <=
+					// but it works exactly opposite of how the logic looks
+					while { ~model.centroid.y < ~chordThresh } {
+						false.yield;
+						count = count + 1
+					};
+					// now centroid y is higher than threshold line
+					// but we can only go ahead if the count is high enough
+					if(count >= ~chordNumBelow) {
+						count = 0;
+						while { ~model.centroid.y >= ~chordThresh } {
+							false.yield;
+							count = count + 1
+						};
+						(count >= ~chordNumAbove).yield;
+					} { false.yield };
+				}
+			};
+		},
 		nextSegCondition: false,
 		radiusThresh: ml.points[1].plotsize.x * 0.06,
 		magThresh: 0.012,
 		respond: {
-			if(BP(\segTrig)[\eventTrigAction].notNil and: {
-				#[3, 4, 5, 6, 7, 8].every { |i| ~model.points[i].mag.last < ~magThresh } and: {
-					~model.points[1].radius >= ~radiusThresh and: {
-						~model.points[1].angle.inclusivelyBetween(0.8pi, 1.2pi)
+			case
+			{	// end trigger: walked off to screen left
+				BP(\segTrig).eventTrigsWaiting[100].notNil and: {
+					#[3, 4, 5, 6, 7, 8].every { |i| ~model.points[i].mag.last < ~magThresh } and: {
+						~model.points[1].radius >= ~radiusThresh and: {
+							~model.points[1].angle.inclusivelyBetween(0.8pi, 1.2pi)
+						}
 					}
 				}
-			}) {
-				BP(\segTrig).eventTrigAction;
+			} {
+				BP(\segTrig).triggerEventByID(100);
+			}
+			{	// chord trigger
+				BP(\segTrig).eventTrigsWaiting[1].notNil and: { ~chordCheck.next }
+			}
+			{
+				BP(\segTrig).triggerEventByID(1);
 			};
 		}
 	));

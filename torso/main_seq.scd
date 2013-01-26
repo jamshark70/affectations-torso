@@ -126,6 +126,7 @@ s.waitForBoot {
 			~eventTrigsWaiting.copy.do { |eventTrig| eventTrig[1].value };
 		},
 		eventTrigCmdByID: { |eventID| ~eventTrigsWaiting[eventID][0] },
+		triggerEventByID: { |eventID| ~eventTrigsWaiting[eventID][1].value },
 		segActive: { |action, segID|
 			~segTrigAction = action;
 			(e {
@@ -178,8 +179,10 @@ s.waitForBoot {
 		~timerUpdater = Updater(~seq, e { |obj, what|
 			switch(what)
 				{ \play } { d.reset }
+
 		});
 	};
+	~volumeUpdater = SimpleController(~seq).put(\play, { topEnvironment[\master].level = -4.dbamp });
 
 	BP(#[mg, ml]).free;
 	if(~useVideo) {
@@ -230,6 +233,7 @@ BP.all.do { |bp| if(#[mstClock, di, traj, mg, ml].includes(bp.collIndex).not) { 
 if(BP.exists(\mstClock)) { BP(\mstClock).free };
 if(BP.exists(\di)) { BP(\di).free };
 if(BP.exists(\traj)) { BP(\traj).free };
+[~timerUpdater, ~volumeUpdater].do(_.remove);
 )
 
 [~glrvb, ~lcrvb, ~cavernousRvb].do(_.run(false));

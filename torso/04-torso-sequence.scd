@@ -826,17 +826,34 @@
 					{
 						BP(\bel).continue = false;
 						Fact(\t2100trig) => BP(\t2100trig);
+						BP(\wch).child.argPairs = [fenv_tscale: Pkey(\length)];
+						BP(\wch).prepareForPlay;
+						BP(\wch).reset;
 						0
 					},
-					bpCmd: (name: \wch, prepareBP: { |bp|
-						bp.child.argPairs = [fenv_tscale: Pkey(\length)];
-						bp.reset;
-					}),
-					30,
+					loopCmd: (
+						cmds: [
+							{
+								BP(\wch).triggerOneEvent(0);
+								1
+							},
+							// {
+							// 	// wait before activating next chord trig
+							// 	// lastEvent is not available until after the iterator yields
+							// 	// so I have to do this in two funcs
+							// 	BP(\wch).lastEvent.delta * 0.2 - 1
+							// },
+							funcCmd: topEnvironment[\trigParms].copy.put(\eventID, 1),
+							\cmdSync,
+						]
+					),
+					18,
 					bpCmd: (name: \wfx),
 					bpCmd: (name: \duetm),
 
-					funcCmd: topEnvironment[\trigParms],
+					// separate event trigger for walking away
+					// t2100trig will call this event by ID
+					funcCmd: topEnvironment[\trigParms].copy.put(\eventID, 100),
 					\cmdSync,
 
 					// {

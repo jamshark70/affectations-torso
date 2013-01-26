@@ -231,3 +231,15 @@ w.refresh;
 
 u.put(\allPtsReceived, { defer { w.refresh } });
 u.put(\allPtsReceived, nil);
+
+
+
+BP(\segTrig).eventTrigCmdByID(1);
+BP(\segTrig).eventTrigsWaiting;
+
+BP(\segTrig).eventTrigsWaiting[1][0].listVars
+
+BP(\segTrig).eventTrigCmdByID(100);
+
+BP(\segTrig).triggerEventByID(1);
+BP(\segTrig).triggerEventByID(100);
