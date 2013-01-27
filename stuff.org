@@ -1,4 +1,4 @@
-* Sections: use of motion [11/12]
+* Sections: use of motion [12/12]
 ** DONE T2000-low tones
 *** Vertical motion in left or right two columns
 *** Need: threshold? Or trigger envelope by y-velocity?
@@ -40,8 +40,8 @@
 *** Stop? How to measure that? (Overall magnitude drops I guess)
 *** Move a little to start a bell gesture: Schmidt trigger with decay
 *** POSTPONED Visual indicator when Schmidt trigger resets?
-** INPROG T2100-Duet
-*** INPROG Control chord dynamics with y and/or x position
+** DONE T2100-Duet
+*** DONE Control chord dynamics with y and/or x position
 **** Video part is setting the parameter, but I don't hear any effect
 *** DONE Run chord process under its own power during fadeout
 *** DONE Trigger chord: Stay below a point for awhile, then rise for awhile
@@ -58,3 +58,4 @@
 * Bugs [2013-01-26 Sat]
 ** TODO Why does the duet melody get stuck on B-C#?
 ** DONE ERROR: Qt: You can not use this Qt functionality in the current thread. Try scheduling on AppClock instead.
+* TODO Write performance notes (what to do in each section)

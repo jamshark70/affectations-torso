@@ -853,7 +853,7 @@
 
 					gcAutoSynthCmd: (
 						gc: { VC(\wp).globalControls[\fenv_sens] },
-						out: \ctlPoint, outName: \outbus,
+						name: \ctlPoint, outName: \outbus,
 						value: 0.8, time: 2
 					),
 					funcCmd: (func: {
@@ -864,14 +864,6 @@
 						{
 							// how long until wch would have played on its own?
 							// time of its last event + lastEvent.delta
-
-							// debugging
-							(BP(\wch).clock === Thread.current.clock).debug("clocks match");
-							[
-								BP(\wch)[\eventSchedTime], BP(\wch).lastEvent.delta, BP(\wch).clock.beats.neg,
-								BP(\wch)[\eventSchedTime] + BP(\wch).lastEvent.delta - BP(\wch).clock.beats
-							].debug("calc remaining delta");
-
 							BP(\wch)[\eventSchedTime] + BP(\wch).lastEvent.delta - BP(\wch).clock.beats
 						},
 						bpCmd: (name: \wch)

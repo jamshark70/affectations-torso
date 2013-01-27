@@ -541,7 +541,7 @@ make: { |name|
 			if(~stillGoing) {
 				// moving average for filter-envelope opener
 				~movingSum = ~movingSum - ~movingAvgBuf[~movingAvgI];
-				~movingAvgBuf[~movingAvgI] = ~model.centroid.y.linlin(-1, 1, 0.8, 0.05);
+				~movingAvgBuf[~movingAvgI] = ~model.centroid.y.linlin(-0.8, 0.33, 0.8, 0.05);
 				~movingSum = ~movingSum + ~movingAvgBuf[~movingAvgI];
 				if(~filling) {
 					~movingAvgI = ~movingAvgI + 1;

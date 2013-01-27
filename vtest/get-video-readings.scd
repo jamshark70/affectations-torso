@@ -243,3 +243,6 @@ BP(\segTrig).eventTrigCmdByID(100);
 
 BP(\segTrig).triggerEventByID(1);
 BP(\segTrig).triggerEventByID(100);
+
+
+VC(\wp).playingNodes.choose.trace;
