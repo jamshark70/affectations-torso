@@ -501,6 +501,7 @@ make: { |name|
 		chordNumBelow: 6,
 		chordNumAbove: 4,
 		chordThresh: 0.33,
+		movingAvgSize: 8,
 		userprep: {
 			// chord check needs to match chordNumBelow y points toward bottom of window,
 			// then chordNumAbove points higher
@@ -527,11 +528,34 @@ make: { |name|
 					} { false.yield };
 				}
 			};
+			~movingAvgBuf = 0 ! ~movingAvgSize;
+			~movingAvgI = 0;
+			~movingSum = 0;
+			~filling = true;
+			~stillGoing = true;
 		},
 		nextSegCondition: false,
 		radiusThresh: ml.points[1].plotsize.x * 0.06,
 		magThresh: 0.012,
 		respond: {
+			if(~stillGoing) {
+				// moving average for filter-envelope opener
+				~movingSum = ~movingSum - ~movingAvgBuf[~movingAvgI];
+				~movingAvgBuf[~movingAvgI] = ~model.centroid.y.linlin(-1, 1, 0.8, 0.05);
+				~movingSum = ~movingSum + ~movingAvgBuf[~movingAvgI];
+				if(~filling) {
+					~movingAvgI = ~movingAvgI + 1;
+					VC(\wp).globalControls[\fenv_sens].set(~movingSum / ~movingAvgI);
+					if(~movingAvgI == ~movingAvgSize) {
+						~filling = false;
+						~movingAvgI = 0;
+					}
+				} {
+					~movingAvgI = (~movingAvgI + 1) % ~movingAvgSize;
+					VC(\wp).globalControls[\fenv_sens].set(~movingSum / ~movingAvgSize);
+				};
+			};
+
 			case
 			{	// end trigger: walked off to screen left
 				BP(\segTrig).eventTrigsWaiting[100].notNil and: {
@@ -542,6 +566,7 @@ make: { |name|
 					}
 				}
 			} {
+				~stillGoing = false;
 				BP(\segTrig).triggerEventByID(100);
 			}
 			{	// chord trigger

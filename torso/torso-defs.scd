@@ -578,12 +578,13 @@ make: { |name|
 			a
 		});
 	};
-	out = Voicer(16, WrapInstr("osc2.vosc3mapfiltenv"), [bufbase: ~wt.first.first.bufnum, numbufs: `(~wt.first.size), basefreq: `(48.midicps), topfreq: `(127.midicps), env: Env.adsr(1.6, 0.8, 0.6, 2.5), fenv: Env(#[1, 40, 1], #[3.5, 4.0].normalizeSum, \sin), fenv_tscale: (3.5+4.0), detune: 1.003, /* ffreq: 900,*/ fenv_sens: 0.8, fenv_vsens: 1, vsens: 0.2], target: ~target);
+	out = Voicer(16, WrapInstr("osc2.vosc3mapfiltenv"), [bufbase: ~wt.first.first.bufnum, numbufs: `(~wt.first.size), basefreq: `(48.midicps), topfreq: `(127.midicps), env: Env.adsr(1.6, 0.8, 0.6, 2.5), fenv: Env(#[1, 40, 1], #[3.5, 4.0].normalizeSum, \sin), fenv_tscale: (3.5+4.0), detune: 1.003, /* ffreq: 900,*/ /*fenv_sens: 0.8,*/ fenv_vsens: 1, vsens: 0.2], target: ~target);
 	out.mapGlobal(\ffreq, nil, 400, \freq);
 	out.mapGlobal(\rq, nil, 1, \myrq);
 	// out.mapGlobal(\clevel, nil, 1, \amp);
 	// out.mapGlobal(\density, nil, 0.8, #[0.5, 3.0]);
 	out.mapGlobal(\freqmul, nil, 1, #[0.5, 2.0, exp], allowGUI: false);
+	out.mapGlobal(\fenv_sens, nil, 0.8, #[0, 0.8]);
 	// SynthDescLib.at(out.nodes[0].defname.asSymbol).msgFuncKeepGate = true;
 	out
 },

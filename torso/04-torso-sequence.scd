@@ -832,17 +832,12 @@
 						0
 					},
 					loopCmd: (
+						id: \chordloop,
 						cmds: [
 							{
 								BP(\wch).triggerOneEvent(0);
-								1
+								4
 							},
-							// {
-							// 	// wait before activating next chord trig
-							// 	// lastEvent is not available until after the iterator yields
-							// 	// so I have to do this in two funcs
-							// 	BP(\wch).lastEvent.delta * 0.2 - 1
-							// },
 							funcCmd: topEnvironment[\trigParms].copy.put(\eventID, 1),
 							\cmdSync,
 						]
@@ -856,10 +851,31 @@
 					funcCmd: topEnvironment[\trigParms].copy.put(\eventID, 100),
 					\cmdSync,
 
-					// {
-					// 	// later: find wch loopCmd and change so that wch plays on its own power
-					// 	0
-					// },
+					gcAutoSynthCmd: (
+						gc: { VC(\wp).globalControls[\fenv_sens] },
+						out: \ctlPoint, outName: \outbus,
+						value: 0.8, time: 2
+					),
+					funcCmd: (func: {
+						var loop = ~iterator.findActive(\chordloop);
+						if(loop.notNil) { loop.stop } { "couldn't stop chordloop cmd (not found)".warn };
+					}),
+					[
+						{
+							// how long until wch would have played on its own?
+							// time of its last event + lastEvent.delta
+
+							// debugging
+							(BP(\wch).clock === Thread.current.clock).debug("clocks match");
+							[
+								BP(\wch)[\eventSchedTime], BP(\wch).lastEvent.delta, BP(\wch).clock.beats.neg,
+								BP(\wch)[\eventSchedTime] + BP(\wch).lastEvent.delta - BP(\wch).clock.beats
+							].debug("calc remaining delta");
+
+							BP(\wch)[\eventSchedTime] + BP(\wch).lastEvent.delta - BP(\wch).clock.beats
+						},
+						bpCmd: (name: \wch)
+					],
 					mixerAutoSynthCmd: (
 						mixer: topEnvironment[\master],
 						name: \ctlPoint, outName: \outbus,

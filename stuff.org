@@ -41,8 +41,9 @@
 *** Move a little to start a bell gesture: Schmidt trigger with decay
 *** POSTPONED Visual indicator when Schmidt trigger resets?
 ** INPROG T2100-Duet
-*** TODO Control chord dynamics with y and/or x position
-*** TODO Run chord process under its own power during fadeout
+*** INPROG Control chord dynamics with y and/or x position
+**** Video part is setting the parameter, but I don't hear any effect
+*** DONE Run chord process under its own power during fadeout
 *** DONE Trigger chord: Stay below a point for awhile, then rise for awhile
 *** DONE Fade out? (Maybe walk away from the machine)
 **** DONE Reset master level when resuming play
