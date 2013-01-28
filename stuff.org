@@ -53,8 +53,8 @@
 ** DONE Wild gesture doesn't always fire
 ** TODO T2060 is still way too quiet
 ** TODO T2060 was hard to trigger
-** TODO Final section trigger is very very very sensitive
-** TODO Did I actually hear bellfx?
+** DONE Final section trigger is very very very sensitive
+** DONE Did I actually hear bellfx?
 * Bugs [2013-01-26 Sat]
 ** TODO Why does the duet melody get stuck on B-C#?
 ** DONE ERROR: Qt: You can not use this Qt functionality in the current thread. Try scheduling on AppClock instead.

@@ -36,7 +36,6 @@ Proto({
 		~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y < ~nextSectionThresh }
 	};
 	~nextSegCheck = { |obj, what, moreArgs|
-		// [SystemClock.beats, ~canAdvanceTime].debug("nextSegCheck");
 		if(SystemClock.beats > ~canAdvanceTime and: { ~nextSegCondition.() }) {
 			~segTrigCount = ~segTrigCount - 1;
 			if(~segTrigCount == 0) { \goAhead } { \notYet }
@@ -48,7 +47,7 @@ Proto({
 	~prRespond = { |obj, what, moreArgs|
 		switch(~nextSegCheck.())
 		{ \goAhead } {
-			"trying to advance to next section".debug;
+			~collIndex.debug("trying to advance to next section");
 			if(BP(\segTrig)[\segTrigAction].notNil) { BP(\segTrig).segTrigAction };
 		}
 		{ \respond } {
@@ -76,9 +75,16 @@ make: { |name|
 		~leftThresh = -0.55;
 		~rightThresh = 0.55;
 		~sign = 0;
+		~moveAheadIndex = 3;  // index of point where centroid must hover
 		~userprep = {
+			var division = ~model.dim.reciprocal * 2;
 			~last = Array.fill(~keep, 0@0);
 			~i = 0;
+			~moveAheadRect = Rect(
+				(~moveAheadIndex div: ~model.dim) * division - 1,
+				(~moveAheadIndex % ~model.dim) * division - 1,
+				division, division
+			).postcs;
 		};
 		~respond = { |obj|
 			var mean;
@@ -111,6 +117,12 @@ make: { |name|
 				};
 				false
 			};
+		};
+
+		~nextSegCondition = {
+			~model.normmag.inclusivelyBetween(*~segRange) and: {
+				~moveAheadRect.containsPoint(~model.centroid)
+			}
 		};
 	}) => BP(name);
 }, type: \bp) => Fact(\t2000trig);
@@ -509,22 +521,22 @@ make: { |name|
 			~chordCheck = Routine {
 				var count;
 				loop {
+					// "looking for y > thresh".debug;
 					count = 0;
-					// I really don't understand: this should be > and the next, <=
-					// but it works exactly opposite of how the logic looks
-					while { ~model.centroid.y < ~chordThresh } {
+					while { ~model.centroid.y >= ~chordThresh } {
 						false.yield;
 						count = count + 1
 					};
 					// now centroid y is higher than threshold line
 					// but we can only go ahead if the count is high enough
-					if(count >= ~chordNumBelow) {
+					if(count >= ~chordNumAbove) {
+						true.yield;
+						// "looking for y < thresh".debug;
 						count = 0;
-						while { ~model.centroid.y >= ~chordThresh } {
+						while { ~model.centroid.y < ~chordThresh } {
 							false.yield;
 							count = count + 1
 						};
-						(count >= ~chordNumAbove).yield;
 					} { false.yield };
 				}
 			};
@@ -570,7 +582,9 @@ make: { |name|
 				BP(\segTrig).triggerEventByID(100);
 			}
 			{	// chord trigger
-				BP(\segTrig).eventTrigsWaiting[1].notNil and: { ~chordCheck.next }
+				// normally I would put the inexpensive check first,
+				// but if the routine doesn't fire right away, it can get stuck in the wrong state
+				~chordCheck.next and: { BP(\segTrig).eventTrigsWaiting[1].notNil }
 			}
 			{
 				BP(\segTrig).triggerEventByID(1);

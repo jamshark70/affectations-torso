@@ -81,8 +81,6 @@
 		segID: 2001,
 		initProcesses: {
 			\chuckIf.eval(Fact(\torsoSolo), BP, \ssd);
-
-			BP(\t2010trig).free;
 		},
 		unloadProcesses: { BP(\ssd).free },
 		seqPattern: {
@@ -94,7 +92,7 @@
 					),
 					\sync
 				],
-				onStop: { BP(\t2000trig).free },
+				onStop: { BP(\t2000trig).debug("freeing").free },
 				dur: \trigger,  // or \sync
 				id: 2010,  // trig id
 				init: Func(\nextThingTrig).v,
@@ -106,7 +104,9 @@
 	PR(\tlsAff).copy.putAll((
 		name: "T2010-stephen solo",
 		segID: 2010,
-		// initProcesses: {},
+		initProcesses: {
+			BP(\t2010trig).free;
+		},
 		// unloadProcesses: {},
 		seqPattern: {
 			Pn((
@@ -124,7 +124,7 @@
 							if(cmd.notNil) { cmd.stop }
 							{ "could not find \\ttonCmd to stop it".warn };
 							BP(\tton).stop(0);
-							BP(\t2000trig).free;
+							BP(\t2000trig).debug("freeing").free;
 							// 0
 						}
 					),
