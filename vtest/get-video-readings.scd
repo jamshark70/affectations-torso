@@ -246,3 +246,12 @@ BP(\segTrig).triggerEventByID(100);
 
 
 VC(\wp).playingNodes.choose.trace;
+
+
+
+BP(\segTrig).eventTrigsWaiting[1][1].def.dumpByteCodes
+
+
+BP(\segTrig).triggerEventByID(1);
+
+BP(\segTrig).triggerEventByID(2);

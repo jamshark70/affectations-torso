@@ -596,8 +596,14 @@
 		seqPattern: {
 			Pn((
 				sequence: [
-					{	var	p = BP(\fastnotes);
+					{	var	p = BP(\fastnotes), stretchBlend;
+
 						if(topEnvironment[\useVideo]) { \makeT2070trig.eval };
+						stretchBlend = blend(
+							BP(\t2070trig).stretchCtl.asPattern,
+							1,
+							Env(#[1, 0], #[7])
+						);
 
 						p.stop(0);
 						p.slowFactor = Env(#[1, 6], #[16], \exp).asStream;
@@ -609,7 +615,7 @@
 								(Pseries.fromEndpoints(0.0, 1.0, rrand(8, 14)) * p.slowFactor).collect { |x| curve.envAt(x) }
 							}),
 							Pstutter(2, Pwhite(0.125, 0.18, 1))   // NOT slowed!
-						], #[0.2, 0.2, 0.2, 0.4], inf) * BP(\t2070trig).stretchCtl;
+						], #[0.2, 0.2, 0.2, 0.4], inf) * stretchBlend;
 						p.delta = p.changingDelta;
 
 						p.sustain = Pkey(\delta) * Pif(Pkey(\delta) > 0.18, Pwhite(0.9, 1.2, inf), 0.5);
@@ -776,7 +782,11 @@
 								} { nil }  // nil should stop the loop
 							},
 							\cmdSync,
-							funcCmd: topEnvironment[\trigParms],
+							{
+								if(BP(\bel).continue ? true) {
+									PR(\funcCmd).copy.putAll(topEnvironment[\trigParms])
+								} { nil }
+							},
 							\cmdSync
 						],
 					),
@@ -825,7 +835,9 @@
 				sequence: [
 					{
 						BP(\bel).continue = false;
-						Fact(\t2100trig) => BP(\t2100trig);
+						if(topEnvironment[\useVideo]) {
+							Fact(\t2100trig) => BP(\t2100trig);
+						};
 						BP(\wch).child.argPairs = [fenv_tscale: Pkey(\length)];
 						BP(\wch).prepareForPlay;
 						BP(\wch).reset;
@@ -838,7 +850,7 @@
 								BP(\wch).triggerOneEvent(0);
 								4
 							},
-							funcCmd: topEnvironment[\trigParms].copy.put(\eventID, 1),
+							funcCmd: topEnvironment[\trigParms].copy.put(\eventID, 2),
 							\cmdSync,
 						]
 					),

@@ -544,14 +544,18 @@ make: { |name|
 					if(count >= ~chordNumBelow) {
 						// fire a chord only if centroid was above, went below, and went up again
 						// do not fire a chord the first time if the centroid started below (normal)
-						if(touchedAbove) { true.yield } { touchedAbove = true };
+						if(touchedAbove) { true.yield };
 						// we must stay in the "above threshold" state before allowing a reset
-						~chordNumAbove.do { false.yield };
-						(e {
-							~text.background_(Color(1, 0.7, 0.7)).string_("vv MOVE DOWN vv");
-						}).defer;
-						while { ~model.centroid.y < ~chordThresh } {
+						count = 0;
+						while { count <= ~chordNumAbove or: { ~model.centroid.y < ~chordThresh } } {
 							false.yield;
+							count = count + 1;
+							if(count == ~chordNumAbove) {
+								(e {
+									~text.background_(Color(1, 0.7, 0.7)).string_("vv MOVE DOWN vv");
+								}).defer;
+								touchedAbove = true;
+							};
 						};
 					} { false.yield };
 				}
@@ -597,6 +601,14 @@ make: { |name|
 			};
 
 			case
+			{	// chord trigger
+				// normally I would put the inexpensive check first,
+				// but if the routine doesn't fire right away, it can get stuck in the wrong state
+				~chordCheck.next and: { BP(\segTrig).eventTrigsWaiting[2].notNil }
+			}
+			{
+				BP(\segTrig).triggerEventByID(2);
+			}
 			{	// end trigger: walked off to screen left
 				BP(\segTrig).eventTrigsWaiting[100].notNil and: {
 					#[3, 4, 5, 6, 7, 8].every { |i| ~model.points[i].mag.last < ~magThresh } and: {
@@ -608,14 +620,6 @@ make: { |name|
 			} {
 				~stillGoing = false;
 				BP(\segTrig).triggerEventByID(100);
-			}
-			{	// chord trigger
-				// normally I would put the inexpensive check first,
-				// but if the routine doesn't fire right away, it can get stuck in the wrong state
-				~chordCheck.next and: { BP(\segTrig).eventTrigsWaiting[1].notNil }
-			}
-			{
-				BP(\segTrig).triggerEventByID(1);
 			};
 		}
 	));
