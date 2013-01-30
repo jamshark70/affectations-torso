@@ -519,33 +519,61 @@ make: { |name|
 			// then chordNumAbove points higher
 			// easiest is a routine
 			~chordCheck = Routine {
-				var count;
+				var count, touchedAbove = (~model.centroid.y < ~chordThresh);
+				// initialize view
+				(e {
+					if(touchedAbove) {
+						~text.background_(Color(1, 0.7, 0.7)).string_("vv MOVE DOWN vv");
+					} {
+						~text.background_(Color(0.7, 1.0, 0.7)).string_("^^ MOVE UP ^^");
+					};
+				}).defer;
 				loop {
-					// "looking for y > thresh".debug;
 					count = 0;
 					while { ~model.centroid.y >= ~chordThresh } {
 						false.yield;
-						count = count + 1
+						count = count + 1;
+						if(count == ~chordNumBelow) {
+							(e {
+								~text.background_(Color(0.7, 1.0, 0.7)).string_("^^ MOVE UP ^^");
+							}).defer;
+						};
 					};
 					// now centroid y is higher than threshold line
 					// but we can only go ahead if the count is high enough
-					if(count >= ~chordNumAbove) {
-						true.yield;
-						// "looking for y < thresh".debug;
-						count = 0;
+					if(count >= ~chordNumBelow) {
+						// fire a chord only if centroid was above, went below, and went up again
+						// do not fire a chord the first time if the centroid started below (normal)
+						if(touchedAbove) { true.yield } { touchedAbove = true };
+						// we must stay in the "above threshold" state before allowing a reset
+						~chordNumAbove.do { false.yield };
+						(e {
+							~text.background_(Color(1, 0.7, 0.7)).string_("vv MOVE DOWN vv");
+						}).defer;
 						while { ~model.centroid.y < ~chordThresh } {
 							false.yield;
-							count = count + 1
 						};
 					} { false.yield };
 				}
 			};
+
+			// I need to see the routine's current state during the show
+			(e {
+				var bounds = Library.at(\motionGui).slotAt(\win).bounds;
+				bounds = bounds.moveBy(0, bounds.height).height_(70);
+				~win = Window("where to move", bounds);
+				~text = StaticText(~win, ~win.view.bounds.insetBy(2, 2))
+				.align_(\center).font_(Font.default.copy.size_(18));
+				~win.front;
+			}).defer;
+
 			~movingAvgBuf = 0 ! ~movingAvgSize;
 			~movingAvgI = 0;
 			~movingSum = 0;
 			~filling = true;
 			~stillGoing = true;
 		},
+		userfree: { (e { ~win.close }).defer },
 		nextSegCondition: false,
 		radiusThresh: ml.points[1].plotsize.x * 0.06,
 		magThresh: 0.012,
