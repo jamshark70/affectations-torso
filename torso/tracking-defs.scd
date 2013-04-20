@@ -5,14 +5,102 @@ var ml = Library.at(\motionListener), mg = Library.at(\motionGui);
 
 // abstract prototype
 
+{ |key, ctlKey(~ctlKey)| BP(ctlKey).ctlAt(key) } => Func(\ctlKey);
+
+
+Proto {
+	~specs = OrderedIdentitySet[
+		\dftSegReqd -> #[1, 25, \lin, 1, 6],
+		\dftSegLo -> #[0, 1, 4, 0, 0.008],
+		\dftSegHi -> #[0, 1, 4, 0, 0.25],
+		\dftNextSectY -> #[-1, 1, \lin, 0, -0.33],
+		\dftMagThresh -> #[0, 1, \lin, 0, 0.7],
+		'10filtThresh' -> #[0, 1, \lin, 0, 0.6],
+		'10wildThresh' -> #[0, 1, \lin, 0, 0.74],
+		// '10magThresh' -> #[0, 1, \lin, 0, 0.7],
+		'10wildPts' -> #[0, 10, \lin, 1, 5],
+		'10wildDur' -> #[0, 10, \lin, 0, 3],
+		'30magThresh' -> #[0, 1, \lin, 0, 0.14],
+		'30decayThresh' -> #[0, 1, \lin, 0, 0.5],
+		'30decayFactor' -> #[0, 1, \lin, 0, 0.905724],
+		'50segThresh' -> #[0, 1, \lin, 0, 0.55],
+		'50segReqd' -> #[0, 10, \lin, 1, 5],
+		// '50trigReqd' -> #[0, 10, \lin, 1, 5],
+		'50trigThresh' -> #[0, 1, \lin, 0, 0.25],
+		'60segReqd' -> #[1, 25, \lin, 1, 5],
+		'60nextSectY' -> #[-1, 1, \lin, 0, 0.33],
+		'90schmidtUp' -> #[-1, 1, \lin, 0, 0.4],
+		'90upRatio' -> #[0, 1, \lin, 0, 0.9],
+		'90schmidtDown' -> #[0, 1, \lin, 0, 0.22],
+		'90downRatio' -> #[-1, 1, \lin, 0, 0.05],
+		'90nextSectY' -> #[-1, 1, \lin, 0, 0.4],
+		'90segReqd' -> #[1, 25, \lin, 1, 8],
+		'100chNumBelow' -> #[0, 10, \lin, 1, 6],
+		'100chNumAbove' -> #[0, 10, \lin, 1, 4],
+		'100chThresh' -> #[-1, 1, \lin, 0, 0.33],
+	];
+	~prep = {
+		~ctls = IdentityDictionary.new;
+		~specs.do { |assn|
+			var spec = assn.value.asSpec;
+			~ctls[assn.key] = GenericGlobalControl(assn.key, nil, spec.default, spec);
+		};
+	};
+	~freeCleanup = {
+		~window.tryPerform(\close);
+		~ctls.free;
+	};
+	~ctlAt = { |key| ~ctls[key] };
+	~makeGui = {
+		var sbounds = Window.screenBounds;
+		if(~window.isNil) {
+			~window = Window("motion parameters", Rect(sbounds.right - 450, 0, 450, sbounds.height), scroll: true);
+			~flow = FlowView(~window, ~window.view.bounds.height_(5000), 2@2, 4@4);
+			Button(~flow, 220@40)
+			.states_([["save"]])
+			.action_(e {
+				File.saveDialog(successFunc: e { |path| ~saveSet.(path) })
+			});
+			Button(~flow, 220@40)
+			.states_([["load"]])
+			.action_(e {
+				File.openDialog(successFunc: e { |path| ~loadSet.(path) })
+			});
+			// ~window.view.decorator = FlowLayout(~window.view.bounds.height_(5000), 2@2, 4@4);
+			~specs.do { |assn|  // ~specs for the order
+				StaticText(~flow, 140@20).align_(\right).string_(assn.key);
+				~ctls[assn.key].gui(~flow);
+				~flow.startRow;
+			};
+			~flow.resizeToFitContents;
+			~window.onClose_(e { ~window = nil }).front;
+		};
+		Environment.current;
+	};
+	~saveSet = { |path|
+		~ctls.collect { |ctl| ctl.value }.writeArchive(path);
+	};
+	~loadSet = { |path|
+		var saved = Object.readArchive(path);
+		if(saved.isKindOf(Dictionary)) {
+			saved.keysValuesDo { |key, value|
+				if(~ctls[key].notNil) { ~ctls[key].value = value };
+			};
+		};
+	};
+} => PR(\thresholdSet);
+
+\chuckIf.eval(PR(\thresholdSet), BP, \ts);
+
 Proto({
+	~ctlKey = \ts;
 	~listenKey = \allPtsReceived;
 	~waitBeforeAdvance = 5;  // no section should be shorter than 5 seconds
 
-	~segReqd = 6;  // reqd for transition to next section
+	~segReqd = \ctlKey.eval(\dftSegReqd);  // reqd for transition to next section
 	~segTrigCount = 0;
-	~segRange = #[0.008, 0.25];
-	~nextSectionThresh = -0.3;
+	~segRange = [\ctlKey.eval(\dftSegLo), \ctlKey.eval(\dftSegHi)];
+	~nextSectionThresh = \ctlKey.eval(\dftNextSectY);
 
 	~prep = {
 		~canAdvanceTime = (SystemClock.beats + ~waitBeforeAdvance); //.debug("set canAdvanceTime");
@@ -59,6 +147,7 @@ Proto({
 		};
 	};
 }) => PR(\viztrig);
+
 
 
 // t2000
@@ -135,11 +224,11 @@ PR(\viztrig).clone({
 	~soloproc = \ssd;
 	~panMulAdd = #[1, 0];
 	~keep = 5;
-	~filterMagThresh = 0.6;
-	~wildThresh = 0.74;
-	~magThresh = 0.7;
-	~wildPts = 5;
-	~wildDuration = 3;
+	~filterMagThresh = \ctlKey.eval('10filtThresh');
+	~wildThresh = \ctlKey.eval('10wildThresh');
+	~magThresh = \ctlKey.eval(\dftMagThresh);
+	~wildPts = \ctlKey.eval('10wildPts');
+	~wildDuration = \ctlKey.eval('10wildDur');
 	~lastWildTime = 0;
 	~ffreqIsOverridden = false;
 	~wildGestureRunning = false;
@@ -254,10 +343,10 @@ make: { |name|
 	PR(\viztrig).clone({
 		~model = ml;
 		~leftRange = [0.7pi, 1.3pi];
-		~magThresh = 0.14;
+		~magThresh = \ctlKey.eval('30magThresh');
 		~decay = 0;
-		~decayThresh = 0.5;
-		~decayFactor = 0.905724;
+		~decayThresh = \ctlKey.eval('30decayThresh');
+		~decayFactor = \ctlKey.eval('30decayFactor');
 		~isLeft = { |theta| theta.exclusivelyBetween(*(~leftRange)) };
 		// ((pi - theta) % 2pi) flips the angle around the vertical axis
 		~isRight = { |theta| ((pi - theta) % 2pi).exclusivelyBetween(*(~leftRange)) };
@@ -297,10 +386,11 @@ make: { |name|
 (
 make: { |name|
 	BP(name).free;
+	~ctlKey = \ts;
 	PR(\viztrig).chuck(BP(name), nil, (
 		model: ml,
 		ptSets: #[[0, 1, 2], [6, 7, 8]],
-		magThresh: 0.7,
+		magThresh: \ctlKey.eval(\dftMagThresh),
 		minRetrigTime: 1.0,
 		userprep: {
 			~ctls = #[thr, fastnotes].collect { |key| BP(key).stretchCtl };
@@ -356,6 +446,7 @@ make: { |name|
 (
 make: { |name|
 	BP(name).free;
+	~ctlKey = \ts;
 	PR(\viztrig).chuck(BP(name), nil, (
 		model: ml,
 		userprep: {
@@ -369,15 +460,15 @@ make: { |name|
 				BP(\tp)[\rotSynth].set(\angleLow, angleLow, \angleHi, angleLow + 0.5);
 			};
 		},
-		segThresh: 0.55,
+		segThresh: \ctlKey.eval('50segThresh'),
 		reqdPoints: 5,
-		segReqd: 4,
+		segReqd: \ctlKey.eval('50segReqd'),
 		nextSegCondition: {
 			~model.points.count { |pt| pt.mag.last > ~segThresh } >= ~reqdPoints
 		},
 		trigCount: 3,
-		trigReqd: 3,
-		trigThresh: 0.25,
+		trigReqd: 3,  // unused?
+		trigThresh: \ctlKey.eval('50trigThresh'),
 		respond: {
 			~updateSynths.();
 			if(BP(\segTrig)[\eventTrigAction].notNil and: { ~model.normmag > ~trigThresh }) {
@@ -396,6 +487,7 @@ make: { |name|
 (
 make: { |name|
 	BP(name).free;
+	~ctlKey = \ts;
 	PR(\viztrig).chuck(BP(name), nil, (
 		model: ml,
 		userprep: {
@@ -406,9 +498,9 @@ make: { |name|
 			var ctl = ~stretchCtl;
 			{ ctl.free }.defer(3);  // seg 2060's processes might break if ctl is freed too soon
 		},
-		segReqd: 5,
+		segReqd: \ctlKey.eval('60segReqd'),
 		// segRange is inherited
-		nextSectionThresh: 0.33,
+		nextSectionThresh: \ctlKey.eval('60nextSectY'),
 		nextSegCondition: {
 			~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y > ~nextSectionThresh }
 		},
@@ -466,6 +558,7 @@ make: { |name|
 (
 make: { |name|
 	BP(name).free;
+	~ctlKey = \ts;
 	PR(\viztrig).chuck(BP(name), nil, (
 		model: ml,
 		userprep: {
@@ -473,10 +566,10 @@ make: { |name|
 		},
 		userfree: { ~testCtl.free },
 		useGui: { |vpi| ~testCtl => VP(vpi) },
-		schmidtUp: 0.4,
-		upRatio: 0.9,
-		schmidtDown: 0.22,
-		downRatio: 0.05,
+		schmidtUp: \ctlKey.eval('90schmidtUp'),
+		upRatio: \ctlKey.eval('90upRatio'),
+		schmidtDown: \ctlKey.eval('90schmidtDown'),
+		downRatio: \ctlKey.eval('90downRatio'),
 		magNow: 0,
 		schmidtActive: false,
 		respond: {
@@ -500,7 +593,8 @@ make: { |name|
 		nextSegCondition: {
 			~model.normmag.inclusivelyBetween(*~segRange) and: { ~model.centroid.y > ~nextSectionThresh }
 		},
-		nextSectionThresh: 0.33
+		segReqd: \ctlKey.eval('90segReqd'),
+		nextSectionThresh: \ctlKey.eval('90nextSectY')
 	));
 }, type: \bp) => Fact(\t2090trig);
 
@@ -508,11 +602,12 @@ make: { |name|
 (
 make: { |name|
 	BP(name).free;
+	~ctlKey = \ts;
 	PR(\viztrig).chuck(BP(name), nil, (
 		model: ml,
-		chordNumBelow: 6,
-		chordNumAbove: 4,
-		chordThresh: 0.33,
+		chordNumBelow: \ctlKey.eval('100chNumBelow'),
+		chordNumAbove: \ctlKey.eval('100chNumAbove'),
+		chordThresh: \ctlKey.eval('100chThresh'),
 		movingAvgSize: 8,
 		userprep: {
 			// chord check needs to match chordNumBelow y points toward bottom of window,
@@ -520,22 +615,26 @@ make: { |name|
 			// easiest is a routine
 			~chordCheck = Routine {
 				var count, touchedAbove = (~model.centroid.y < ~chordThresh);
+				var strings = ["vv MOVE DOWN vv", "^^ MOVE UP ^^"], strI;
 				// initialize view
 				(e {
 					if(touchedAbove) {
-						~text.background_(Color(1, 0.7, 0.7)).string_("vv MOVE DOWN vv");
+						strI = 0;
+						~text.background_(Color(1, 0.7, 0.7)).string_(strings[strI]);
 					} {
-						~text.background_(Color(0.7, 1.0, 0.7)).string_("^^ MOVE UP ^^");
+						strI = 1;
+						~text.background_(Color(0.7, 1.0, 0.7)).string_(strings[strI]);
 					};
 				}).defer;
 				loop {
 					count = 0;
-					while { ~model.centroid.y >= ~chordThresh } {
+					while { (~model.centroid.y >= ~chordThresh) } {
 						false.yield;
 						count = count + 1;
-						if(count == ~chordNumBelow) {
+						if(count >= ~chordNumBelow and: { strI == 0 }) {
+							strI = 1;
 							(e {
-								~text.background_(Color(0.7, 1.0, 0.7)).string_("^^ MOVE UP ^^");
+								~text.background_(Color(0.7, 1.0, 0.7)).string_(strings[strI]);
 							}).defer;
 						};
 					};
@@ -550,9 +649,10 @@ make: { |name|
 						while { count <= ~chordNumAbove or: { ~model.centroid.y < ~chordThresh } } {
 							false.yield;
 							count = count + 1;
-							if(count == ~chordNumAbove) {
+							if(count >= ~chordNumAbove and: { strI == 1 }) {
+								strI = 0;
 								(e {
-									~text.background_(Color(1, 0.7, 0.7)).string_("vv MOVE DOWN vv");
+									~text.background_(Color(1, 0.7, 0.7)).string_(strings[strI]);
 								}).defer;
 								touchedAbove = true;
 							};
