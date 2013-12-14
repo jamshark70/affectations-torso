@@ -1,0 +1,44 @@
+UGenFunc : AbstractFunction {
+	var	<>func, buildSynthDef;
+
+	var	<ugens;	// cache ugens so the same subgraph can be used in multiple places
+
+	*new { |func| ^super.newCopyArgs(func) }
+
+	rate { ^\noncontrol }
+
+	asUGenInput {
+		buildSynthDef ?? { buildSynthDef = UGen.buildSynthDef };
+		// if we're now building a different synthdef
+		// from the one that first evaluated this ugenfunc,
+		// we must discard the old ugens and rebuild
+		if(buildSynthDef !== UGen.buildSynthDef) {
+			ugens = nil;
+			buildSynthDef = UGen.buildSynthDef;
+		};
+		ugens ?? { ugens = func.value };
+		^ugens
+	}
+
+	value { ^this.asUGenInput }
+
+	composeUnaryOp { arg aSelector;
+		^UnaryOpUGen.new(aSelector, this.asUGenInput)
+	}
+	composeBinaryOp { arg aSelector, something, adverb;
+		^BinaryOpUGen.new(aSelector, this.asUGenInput, something.asUGenInput)
+	}
+	reverseComposeBinaryOp { arg aSelector, something, adverb;
+		^BinaryOpUGen.new(aSelector, something.asUGenInput, this.asUGenInput);
+	}
+	// no NAryOpUGen
+	// composeNAryOp { arg aSelector, anArgList;
+	// 	^NAryOpFunction.new(aSelector, this.asUGenInput, anArgList)
+	// }
+
+	asTestUGenInput { ^this }
+	isValidVoicerArg { ^true }
+
+	// Env support: a UGenFunc may return an Env
+	asMultichannelArray { ^this.asUGenInput.asMultichannelArray }
+}

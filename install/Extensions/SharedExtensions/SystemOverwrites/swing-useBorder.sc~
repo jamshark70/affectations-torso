@@ -1,0 +1,21 @@
++ JSCTextEditBase {
+	*useBorder {
+		if(Library.at(this, \useBorder).isNil) {
+			Library.put(this, \useBorder, true);  // default
+		};
+		^Library.at(this, \useBorder)
+	}
+
+	*useBorder_ { |bool = true|
+		Library.put(this, \useBorder, bool ? true);
+	}
+
+	init { arg argParent, argBounds, id;
+		typingColor = Color.red;
+		normalColor = Color.black;
+		parent = argParent.asView; // actual view
+		this.prInit( parent.asView, argBounds, this.class.viewClass, parent.server, id );
+		if(this.class.useBorder == false) { this.borderless_(true) };
+		argParent.add( this );//maybe window or viewadapter
+	}
+}

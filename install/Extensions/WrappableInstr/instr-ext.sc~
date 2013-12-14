@@ -1,0 +1,108 @@
+
++ HJHInstr {
+	patchClass { ^HJHPatch }
+	synthDefClass { ^HJHInstrSynthDef }
+
+	init { arg specs,outsp;
+		if(path.isNil,{
+			path = thisProcess.nowExecutingPath; //  ?? { Document.current.path };
+		});
+		this.makeSpecs(specs ? #[]);
+		if(outsp.isNil,{
+			outSpec = nil;
+		},{
+			outSpec = outsp.asSpec;
+		});
+		this.class.put(this);
+	}
+
+	*loadAll {
+		var quarkInstr;
+		(this.dir ++ "*").pathMatch.do({ arg path;
+			if(path.last != $/,{
+				path.loadPath(false)
+			})
+		});
+		(this.dir ++ "WrapInstr/*").pathMatch.do({ arg path;
+			if(path.last != $/,{
+				path.loadPath(false)
+			})
+		});
+
+		quarkInstr = (Platform.userExtensionDir ++ "/quarks/*/Instr/*").pathMatch
+			.reject { |path| path.splitext[1] == "sc" };
+		quarkInstr.do({ |path|
+			if(path.last != $/,{
+				path.loadPath(false);
+			})
+		});
+	}
+}
+
++ HJHInstrSynthDef {
+	*clearCache { arg server;
+		"Clearing AbstractPlayer SynthDef cache".inform;
+		if(Library.at(SynthDef, server).notNil and: { server.serverRunning }) {
+			Library.at(SynthDef, server).keysDo({ |key|
+				server.sendMsg(\d_free, key);
+			});
+		};
+		Library.put(SynthDef,server,nil);
+	}
+}
+
++ Object {
+	adjustArgForSpec { ^this }
+}
+
+// allows easy override of controlspec defaults while still producing a control
+
++ Ref {
+	adjustArgForSpec { |spec|
+		value.isNumber.if({
+			^KrNumberEditor(value, spec)
+		}, {
+			^value
+		});
+	}
+}
+
+
+// asWrapInstr
+
++ Instr {
+	asWrapInstr {}
+}
++ WrapInstr {
+	asWrapInstr {}
+}
++ SequenceableCollection {
+	asWrapInstr {
+		^WrapInstr.at(this)
+	}
+}
+
++ Symbol {
+	asWrapInstr {
+		^WrapInstr.at(this)
+	}
+}
+
++ String {
+	asWrapInstr {
+		^WrapInstr.at(this)
+	}
+}
+
++ Function {
+	asWrapInstr {
+		^WrapInstr("f" ++ this.hash,this)
+	}
+}
+
+/*+ Patch {
+	*new { arg name,inputs,outClass;
+		^super.new.loadSubject(name).createArgs(inputs ? []).outClass_(outClass ? Out)
+	}
+}
+*/

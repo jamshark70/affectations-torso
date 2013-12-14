@@ -1,0 +1,31 @@
+
++ Main {
+	stop {
+		var	popup, okbutton, cancelbutton;
+		{	popup = GUI.window.new("Really stop?", Rect(GUI.window.screenBounds.width * 0.5 - 200,
+				GUI.window.screenBounds.height * 0.5 - 100, 400, 200)).front;
+			okbutton = GUI.button.new(popup, Rect(70, 100, 100, 30))
+				.states_([["OK"]])
+				.action_({ 
+					// SystemClock.clear;
+					// AppClock.clear;
+					// TempoClock.all.do(_.clear);
+					protect { CmdPeriod.run } {
+						popup.close;
+						Server.all.do(_.stopAliveThread);
+						Server.resumeThreads;
+					};
+					
+					// Server.freeAll; // stop all sounds on local servers
+					// Server.resumeThreads;
+				});
+			cancelbutton = GUI.button.new(popup, Rect(230, 100, 100, 30))
+				.focus(true)
+				.states_([["Cancel"]])
+				.action_({ popup.close });
+			GUI.staticText.new(popup, Rect(70, 20, 260, 60))
+				.align_(\center).string_("cmd-. for real?")
+				.font_(GUI.font.new("Helvetica", 30)).stringColor_(Color.red);
+		}.defer;
+	}
+}

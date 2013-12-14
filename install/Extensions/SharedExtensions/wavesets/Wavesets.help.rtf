@@ -1,0 +1,414 @@
+{\rtf1\mac\ansicpg10000\cocoartf102
+{\fonttbl\f0\fswiss\fcharset77 Helvetica;\f1\fnil\fcharset77 Monaco;}
+{\colortbl;\red255\green255\blue255;\red191\green0\blue0;\red0\green0\blue191;\red96\green96\blue96;
+\red0\green115\blue0;}
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f0\fs44 \cf0 Wavesets \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\fs28 \cf0 \
+analyses soundfiles into wavesets and keeps all waveset data.\
+This can support a variety of waveset based instruments.\
+\
+By Trevor Wishart's definition, a waveset is a segment of \
+an audio signal between one non-positive to positive zero \
+crossing and the next. [ see T. Wishart : Audible Design. ]\
+Please note that this definition only applies to mono signals.\
+\
+The Wavesets Class keeps a dictionary of all analysed wavesets.\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f1\fs18 \cf0 Wavesets.all;		// a dictionary of all analyzed wavesets.\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f0\fs28 \cf0 \
+Load a file into a signal by hand and analyse it:\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f1\fs18 \cf0 \
+(\
+		\cf2 // minLength is the shortest allowed waveset length.\cf0 \
+		\cf2 // anything shorter will be merged with the next waveset.\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf3 Wavesets\cf0 .minLength = 5;	\
+\
+f = \cf3 SoundFile\cf0 .new; \
+f.openRead(\cf4 "sounds/a11wlk01.wav"\cf0 );\
+f.readData(g = \cf3 Signal\cf0 .newClear(f.numFrames));\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf2 //	g.dump;\cf0 \
+		\cf2 // create a new instance with a name and signal:\cf0 \
+w = \cf3 Wavesets\cf0 (\cf5 \\apollo\cf0 , g);\
+\cf2 //	w.dump;\cf0 \
+)\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f0\fs28 \cf0 or do it directly from a file : \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f1\fs18 \cf0 \
+w = \cf3 Wavesets\cf0 .from(\cf4 "sounds/a11wlk01.wav"\cf0 );\
+g = w.signal;\
+\
+w.dump;\
+\
+w.xings;\
+w.numXings;\
+w.lengths;\
+w.amps;			\
+\
+w.fracXings;		// calculate fractional zerocrossing points.\
+				// this is a bit more accurate and can sound a bit smoother.\
+w.fracLengths;	\
+				\
+		// some statistics which can be useful:	\
+w.minSet;			// shorted waveset\
+w.maxSet;			// longest\
+w.avgLength;		\
+w.sqrAvgLength;	// not sure this is useful.\
+w.minAmp;			// softest\
+w.maxAmp;			// loudest\
+w.avgAmp;			\
+w.sqrAvgAmp;			\
+\
+\
+	\cf2 // a single waveset:\cf0 \
+g.copyRange(w.xings[0], w.xings[1] - 1).postln.plot;\
+\
+g.copyRange(w.xings[600], w.xings[601] - 1).plot;\
+\
+	\cf2 // 5 \cf0 \
+g.copyRange(w.xings[600], w.xings[605]).plot;\
+\
+	\cf2 // 20\cf0 \
+g.copyRange(w.xings[600], w.xings[620]).plot;\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f0\fs28 \cf0 \
+	// load soundfile into buffer:
+\f1\fs18 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf3 Server\cf0 .default = s = \cf3 Server\cf0 .internal.boot;\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf2 	// read soundfile into buffer 0\cf0 \
+b = \cf3 Buffer\cf0 .read(s, \cf4 "sounds/a11wlk01.wav"\cf0 , 0, -1, bufnum: 0);\
+\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f0\fs28 \cf0 	// play one waveset (or waveset group:\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f1\fs18 \cf0 (\
+\{ 	\cf3 var\cf0  startFr, endFr, dur; \
+	startFr = w.xings[800]; \
+	endFr = w.xings[820];\
+	\
+	dur = endFr - startFr / f.sampleRate;\
+	dur.postln;\
+	\cf3 BufRd\cf0 .ar(1, 0, \cf3 Line\cf0 .ar(startFr, endFr, dur , doneAction: 2)) \
+\}.play;\
+)\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f0\fs28 \cf0 		// timestretch * 3\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f1\fs18 \cf0 (\
+\{ 	\cf3 var\cf0  startFr, endFr, dur, stretch; \
+\
+	startFr = w.xings[800]; \
+	endFr = w.xings[820];\
+	stretch = 3;\
+	\
+	dur = endFr - startFr / f.sampleRate;	\
+	dur = dur * stretch;\
+	dur.postln;\
+	\cf3 BufRd\cf0 .ar(1, 0, \cf3 Line\cf0 .ar(startFr, endFr, dur, doneAction: 2)) \
+\}.play;\
+)\
+\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f0\fs28 \cf0 	loop buffer segments with a Phasor:\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f1\fs18 \cf0 (\
+\{ 	\cf3 BufRd\cf0 .ar(1, 0, \
+		\cf3 Phasor\cf0 .ar(0, \cf3 BufRateScale\cf0 .kr(0), w.xings.at(100), w.xings.at(105))\
+	) \
+\}.scope;\
+)	\
+\
+g.copyRange(w.xings.at(100), w.xings.at(105)).plot;\
+\
+	// some Phasor examples:\
+\{ \cf3 Phasor\cf0 .ar(0, 1, 0, 50) * 0.01 \}.scope;\
+\{ \cf3 Phasor\cf0 .ar(0, 0.2, 0, 50) * 0.01 \}.scope;\
+\{ \cf3 Phasor\cf0 .ar(0, -0.2, 0, 50) * 0.01 \}.scope;\
+\
+\
+	
+\f0\fs28 // loop wavesets, continuous
+\f1\fs18 \
+(\
+x = \{ \cf3 arg\cf0  start = 0, end = 10, rate = 1; \
+	\cf3 BufRd\cf0 .ar(1, 0, \
+		\cf3 Phasor\cf0 .ar(0, rate * \cf3 BufRateScale\cf0 .kr(0), start, end)\
+	)\
+\}.play;\
+)\
+\
+x.set(\cf5 \\start\cf0 , 0, \cf5 \\end\cf0 , 5);\
+x.set(\cf5 \\start\cf0 , w.xings.at(100), \cf5 \\end\cf0 , w.xings.at(101));\
+x.set(\cf5 \\start\cf0 , w.xings.at(101), \cf5 \\end\cf0 , w.xings.at(102));\
+x.set(\cf5 \\start\cf0 , w.xings.at(100), \cf5 \\end\cf0 , w.xings.at(200));\
+x.set(\cf5 \\rate\cf0 , 0.25);\
+x.set(\cf5 \\rate\cf0 , 1);\
+x.set(\cf5 \\rate\cf0 , -1);\
+\
+(\
+t = \cf3 Task\cf0  (\{ \
+	\cf3 var\cf0  start, len = 5; \
+		100.do (\{\
+			start = rrand (0, 1000). postln;\
+			x.set(\cf5 \\start\cf0 , w.xings.at(start), \cf5 \\end\cf0 , w.xings.at(start + len));\
+			wait (0.15);	\
+		\})\
+\}).play;\
+)\
+\
+\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f0\fs28 \cf0 To end playing a waveset(or group) after a precise number of repetitions, \
+a SynthDef with a hard cutoff envelope:\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f1\fs18 \cf0 // note that adding an offset outside phasor seems to work better; \
+// Phasor.ar(0, rate, start, end) was sometimes off by ca. 10 samples or so.\
+// I have no explanation for this yet.\
+\
+(\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf3 SynthDef\cf0 (\cf4 "waveset"\cf0 , \{ \cf3 arg\cf0  out = 0, bufnum = 0, start = 0, end, rate = 1, dur = 1, amp=0.2; \
+	\cf3 var\cf0  phasor;\
+	phasor = \cf3 Phasor\cf0 .ar(0, \cf3 BufRateScale\cf0 .kr(bufnum) * rate, 0, end - start) + start;\
+	\cf3 OffsetOut\cf0 .ar(out, \
+		\cf2 // [ BufRd.ar(1, bufnum, phasor), phasor - start * 0.01 - 1 ] // debug\cf0 \
+		\cf3 BufRd\cf0 .ar(1, bufnum, phasor)\
+	 	* \cf3 EnvGen\cf0 .ar(\cf3 Env\cf0 ([amp, amp, 0], [dur, 0]), doneAction: 2)\
+	 );\
+\}).send(s);\
+)\
+\
+\cf3 Synth\cf0 (\cf4 "waveset"\cf0 , [\cf5 \\bufnum\cf0 , 0, \cf5 \\start\cf0 , 0, \cf5 \\end\cf0 , 5000, \cf5 \\dur\cf0 , 1]);\
+\
+(\
+\cf3 var\cf0  a=100, e = 102, rep = 1, dur, rate = 0.5;\
+\cf3 var\cf0  startframe, endframe;\
+\
+startframe = w.xings[a];\
+endframe = w.xings[e];\
+dur = (endframe - startframe) * rep / rate / f.sampleRate; \
+\
+\cf3 Synth\cf0 (\cf4 "waveset"\cf0 , [\
+	\cf5 \\bufnum\cf0 , 0, \
+	\cf5 \\start\cf0 , startframe, \
+	\cf5 \\end\cf0 , endframe, \
+	\cf5 \\rate\cf0 , rate,\
+	\cf5 \\dur\cf0 , dur, \
+	\cf5 \\amp\cf0 , 3\
+]);\
+)\
+\
+(\
+\cf3 Task\cf0 (\{ \
+	1300.do(\{ \cf3 arg\cf0  i; \
+		\cf3 var\cf0  a=100, e = 102, rep = 1, dur, rate = 1;\
+		\cf3 var\cf0  startframe, endframe;\
+		\
+		a = 100 + i; \
+		e = a + 2; \
+		rep = 4; \
+		\
+		startframe = w.xings[a];\
+		endframe = w.xings[e];\
+		dur = (endframe - startframe) * rep / rate / f.sampleRate; \
+			\
+			// better timing with sendBundle that with Synth("waveset", ...);\
+		s.sendBundle(0.2, [ \cf4 "s_new"\cf0 , \
+			\cf4 "waveset"\cf0 , -1, 0, 0, \
+			\cf5 \\bufnum\cf0 , 0, \
+			\cf5 \\start\cf0 , startframe, \
+			\cf5 \\end\cf0 , endframe, \
+			\cf5 \\rate\cf0 , rate,\
+			\cf5 \\dur\cf0 , dur, \
+			\cf5 \\amp\cf0 , 0.5\
+		]);\
+		(dur ).wait; \
+	\});\
+\}).play;\
+)\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf2 		// compare fractional and integer xings; \
+		// fractional does better looping and finer pitch gradations.\cf0 \
+(\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf3 Task\cf0 (\{ \
+	100.do(\{ \cf3 arg\cf0  i; \
+		\cf3 var\cf0  a=100, e = 102, rep = 1, dur, rate = 1;\
+		\cf3 var\cf0  startframe, endframe;\
+		\
+		a = 600 + i; \
+		e = a + 5; \
+		rep = 10; \
+		\
+			// integer\
+		startframe = w.fracXings[a]; 		endframe = w.fracXings[e];\
+		\
+			// uncomment for fractional xings:\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf2 		startframe = w.xings[a];			endframe = w.xings[e];\cf0 \
+\
+		dur = (endframe - startframe) * rep / rate / f.sampleRate; \
+		\
+		s.sendBundle(0.2, [ \cf4 "s_new"\cf0 , \
+			\cf4 "waveset"\cf0 , -1, 0, 0, \
+			\cf5 \\bufnum\cf0 , 0, \
+			\cf5 \\start\cf0 , startframe, \
+			\cf5 \\end\cf0 , endframe, \
+			\cf5 \\rate\cf0 , rate,\
+			\cf5 \\dur\cf0 , dur, \
+			\cf5 \\amp\cf0 , 0.5\
+		]);\
+		(dur ).wait; \
+	\});\
+\}).play;\
+)\
+\
+		// waveset timestretch\
+(\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf3 Task\cf0 (\{ \
+	270.do(\{ \cf3 arg\cf0  i; \
+		\cf3 var\cf0  a=100, e = 102, rep = 1, dur, rate = 1;\
+		\cf3 var\cf0  startframe, endframe;\
+		\
+		a = (i * 5); \
+		e = a + 5; \
+		rep = 4; \
+		\
+		startframe = w.xings[a];\
+		endframe = w.xings[e];\
+		dur = (endframe - startframe) * rep / rate / f.sampleRate; \
+		\
+		s.sendBundle(0.2, [ \cf4 "s_new"\cf0 , \
+			\cf4 "waveset"\cf0 , -1, 0, 0, \
+			\cf5 \\bufnum\cf0 , 0, \
+			\cf5 \\start\cf0 , startframe, \
+			\cf5 \\end\cf0 , endframe, \
+			\cf5 \\rate\cf0 , rate,\
+			\cf5 \\dur\cf0 , dur, \
+			\cf5 \\amp\cf0 , 0.5\
+		]);\
+		(dur * 1).wait; \
+	\});\
+\}).play;\
+)\
+\
+	// single wavesets x 10;\
+(\
+\cf3 Task\cf0 (\{ \
+	\cf3 var\cf0  start, end, startFr, endFr, dur, repeats;\
+	1400.do(\{ \cf3 arg\cf0  i; \
+		repeats = 10;\
+		start = i * 1;\
+		end = start + 1; \
+		startFr = w.fracXings[start]; \
+		endFr = w.fracXings[end] - 1; 	\
+		dur = endFr - startFr / f.sampleRate * repeats; \
+		\
+		s.sendBundle(0.2, [ \cf4 "s_new"\cf0 , \
+			\cf4 "waveset"\cf0 , -1, 0, 0, \
+			\cf5 \\bufnum\cf0 , 0, \
+			\cf5 \\start\cf0 , startFr, \
+			\cf5 \\end\cf0 , endFr, \
+			\cf5 \\rate\cf0 , 1,\
+			\cf5 \\dur\cf0 , dur\
+		]);\
+				// with pauses\
+		(dur * 2).wait; \
+	\});\
+\}).play;\
+)\
+\
+	\cf2 // play them sorted by (integer) waveset length: \cf0 \
+w.lengths.plot;\
+o = w.lengths.order;\
+(\
+\cf3 Task\cf0 (\{ \
+	\cf3 var\cf0  start, end, startFr, endFr, dur, repeats;\
+	\cf3 var\cf0  order; \
+	order = w.lengths.order;	\cf2 // nach der laenge\cf0 \
+	order.do(\{ \cf3 arg\cf0  indexXing; \
+		repeats = 10;\
+		start = indexXing;\
+		end = start + 1; \
+		startFr = w.xings[start]; \
+		endFr = w.xings[end]; 	\
+		dur = endFr - startFr * repeats / f.sampleRate; \
+		\
+		s.sendBundle(0.5, [ \cf4 "s_new"\cf0 , \
+			\cf4 "waveset"\cf0 , -1, 0, 0, \
+			\cf5 \\bufnum\cf0 , 0, \
+			\cf5 \\start\cf0 , startFr, \
+			\cf5 \\end\cf0 , endFr, \
+			\cf5 \\rate\cf0 , 1,\
+			\cf5 \\dur\cf0 , dur\
+		]);\
+		(dur).wait; \
+	\});\
+\}).play;\
+)\
+\
+// same with fractional lengths:\
+w.fracLengths.plot;\
+o = w.fracLengths.order;\
+\
+(\
+\cf3 Task\cf0 (\{ \
+	\cf3 var\cf0  start, end, startFr, endFr, dur, repeats;\
+	\cf3 var\cf0  order; \
+	order = w.fracLengths.order;	\cf2 // by fractional waveset length\cf0 \
+	order.do(\{ \cf3 arg\cf0  indexXing; \
+		repeats = 10;\
+		start = indexXing;\
+		end = start + 1; \
+		startFr = w.fracXings[start]; \
+		endFr = w.fracXings[end]; 	\
+		dur = endFr - startFr * repeats / f.sampleRate; \
+		\
+		s.sendBundle(0.5, [ \cf4 "s_new"\cf0 , \
+			\cf4 "waveset"\cf0 , -1, 0, 0, \
+			\cf5 \\bufnum\cf0 , 0, \
+			\cf5 \\start\cf0 , startFr, \
+			\cf5 \\end\cf0 , endFr, \
+			\cf5 \\rate\cf0 , 1,\
+			\cf5 \\dur\cf0 , dur\
+		]);\
+		(dur).wait; \
+	\});\
+\}).play;\
+)\
+\
+// hopefully more examples to come.\
+}
