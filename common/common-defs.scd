@@ -7,7 +7,11 @@ s.latency = 0.075;
 
 s.waitForBoot {
 
-	~master ?? { ~master = MixerChannel(\master, s, 2, 2, level: -4.dbamp) };
+	~master ?? {
+		~master = MixerChannel(\master, s, 2, 2, level: -4.dbamp, completionFunc: { |chan|
+			~eq = MultiEQ(2, \loshelf, 80, -4.dbamp, 1).play(chan, addAct: \addToHead);
+		});
+	};
 
 	// don't want reverb on netbook
 	if(screenBounds.height > 600) {
