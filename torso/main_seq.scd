@@ -23,8 +23,8 @@ if(~useVideo ? true) {
 		if(result > 0) {
 			// pd is not running; load the video patch
 			"pd-extended %".format(
-				(HrVideoData.filenameSymbol.asString.dirname.dirname.dirname
-					+/+ "common/frame-diff-gem-no-close.pd").escapeChar($ )
+				(HrVideoListener.filenameSymbol.asString.dirname
+					+/+ "frame-diff-gem-no-close.pd").escapeChar($ )
 			).unixCmd;
 		};
 	}, postOutput: true);  // postOutput is required to avoid "broken pipe"
