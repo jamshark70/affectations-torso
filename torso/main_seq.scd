@@ -12,7 +12,7 @@
 ~useVideo = false;
 
 
-// this block loads everything: cursor on open-paren, then ctrl-alt-x
+// this block loads everything: ctrl-return inside the parenthesis
 (
 var	mypath = thisProcess.nowExecutingPath, indices, motionListener, motionGui;
 if(BP.exists(\transports)) { BP(\transports).free };
