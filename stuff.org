@@ -66,7 +66,7 @@
   :PROPERTIES:
   :EXPORT_TITLE: /Affectations/Torso/
   :EXPORT_AUTHOR: H. James Harkins
-  :EXPORT_OPTIONS: toc:nil
+  :EXPORT_OPTIONS: toc:nil ^:nil
   :END:
 
 ** /Affectations/Torso/

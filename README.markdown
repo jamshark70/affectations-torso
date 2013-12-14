@@ -78,9 +78,9 @@ the following within SuperCollider:
 
 The Extensions directory in this repository contains specific versions
 of two sets of [Quarks](http://doc.sccode.org/Guides/UsingQuarks.html). If you have already installed these quarks
-(cruciallib and dewdrop<sub>lib</sub>), you will get &ldquo;Duplicate class&rdquo; errors
+(cruciallib and dewdrop\_lib), you will get &ldquo;Duplicate class&rdquo; errors
 when starting SC or recompiling the class library. If this occurs, you
-should uninstall cruciallib and dewdrop<sub>lib</sub>, using either `Quarks.gui`
+should uninstall cruciallib and dewdrop\_lib, using either `Quarks.gui`
 or the following code:
 
     Quarks.uninstall("dewdrop_lib");
